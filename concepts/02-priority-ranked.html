@@ -1,0 +1,566 @@
+<!--
+  ============================================================================
+  ASTRUS SUBMISSION SUMMARY — CONCEPT 02 "PRIORITY RANKED"
+  ----------------------------------------------------------------------------
+  ONE cohesive Salesforce card (NOT a dashboard, NOT a card-stack). Its vertical
+  flow walks the underwriter's decision top-to-bottom in the transcript-derived
+  scan order (SHARED-SPEC-V3 §6), with a deliberate LOUD -> QUIET visual taper so
+  the reading path literally IS the priority:
+
+     compact orientation header  (WHO — quiet, Tier-3)
+        v
+     BEAT 1 + 2  — LINES OF BUSINESS gradient tiles + their EXPOSURES  (DOMINANT, Tier-1)
+        v
+     BEAT 3      — LOSS RUNS present vs NOT produced  (co-loud RED gap, Tier-2)
+        v
+     plain-words status legend  (quiet)
+        v
+     supporting context  (quietest, Tier-3)
+
+  This is a QUICK AT-A-GLANCE PRESENT-vs-MISSING SCANNER (G3 reframe): a present
+  exposure is a loud confident number; a MISSING / empty one reads instantly as a
+  HOLE (muted, flagged) — absence is a first-class signal. Not a weighted bar chart.
+  Pure visual mockup. LIGHT MODE ONLY. Renders offline, fully self-contained.
+
+  ---- PER-LOB "ITEM SCAN" DATA MODEL (SHARED-SPEC-V3 §3.1, Tyler correction #2) ---
+  Line of business is the ORGANIZING AXIS. Each LOB tile answers a PRESENCE + COUNT +
+  TOTAL scan for BOTH facets — EXPOSURE and LOSS RUNS — using ONLY real figures (never
+  fabricate a count, G12): where a type has a natural count (Auto = power units) show
+  the count; where it does not (WC payroll, GL revenue) show the TOTAL only and omit the
+  count. Loss runs are tracked per LOB AND rolled up at the submission / TPA level
+  (A&B TPA = ESIS) — for A&B every loss field is null, so every per-LOB loss facet reads
+  "Not produced" and the submission/TPA-level RED band headlines the total gap.
+  The LOB row is a REPEATABLE component (LWC template v-for over getLinesOfBusiness()):
+  it scales to 3 / 5 / 7+ LOBs and new exposure types WITHOUT hardcoding — nothing here
+  assumes exactly 5. When loss history IS produced elsewhere, the loss facet/band shows
+  valuation date + # years + # claims + total incurred (graceful non-empty state).
+
+  ---- LWC MAPPING (how this becomes a real Lightning Web Component) ----------
+  Component:   c-astrus-submission-summary  (pinned to top of the Submission record page)
+  Data:        @wire(getRecord, { recordId, fields: [Name, Status__c, New_Renewal__c,
+                 Effective_Date__c, Expiration_Date__c, Submitting_Broker_Text__c,
+                 Carrier__c, Market_Action__c, TPA__c, Loss_Run_Valuation_Date__c,
+                 Loss_Run_Days_Old__c ...] })  +  Apex @wire getLinesOfBusiness()
+                 returning per-LOB { name, state, statusToken, exposureLabel,
+                 exposureValue, emptyFieldLabel }.
+  Status:      derived in Apex (see §4 semantics) — Produced / Partial / Not produced.
+               NEVER rendered: Overall_Confidence__c (73.5), Market_Routing_Confidence__c
+               (Medium), Requires_Review__c (true).  NO %, NO reprocess, NO tabs, NO Term
+               KPI, NO "# lines of business" KPI, NO vehicle bar.
+  Markup:      ONE <lightning-card>; regions are CSS-grid / flex separated by whitespace +
+               1px hairlines (never nested boxes-in-boxes). <lightning-formatted-currency>,
+               <lightning-formatted-number>, <lightning-formatted-date-time> for money /
+               counts / dates; status tokens = <lightning-icon> (utility:check / warning /
+               error) + text; loss region = <lightning-icon icon-name="utility:error"> + text.
+  GRADIENT:    The gradient LOB tiles use CSS `linear-gradient(90deg, <status-bg>, #fff 62%)`.
+               This is PLAIN CSS in the component's scoped stylesheet — FULLY SUPPORTED inside
+               an LWC, no external dependency, no @font-face, no CDN. (G17 confirmed.)
+  Styling:     SLDS / SLDS2 design tokens; spacing via --lwc-spacing-* hooks (rem fallbacks
+               shown here). Light mode only. LWS-safe: system fonts, inline CSS/SVG, no
+               external CDN/framework, no eval, no remote innerHTML.
+  A11y:        semantic headings, <dl> for facts, status = color + icon + text (never color
+               alone), contrast >= 4.5:1, tabular-nums money alignment.
+  ============================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Astrus Submission Summary — Priority Ranked</title>
+<style>
+  :root {
+    /* ---- palette (SHARED-SPEC-V3 §2, LIGHT ONLY) ---- */
+    --brand: #0176d3; --brand-dark: #032d60;
+    --ink: #181818; --text-2: #514f4d; --muted: #706e6b;
+    --border: #e5e5e5; --surface: #ffffff; --recess: #fafaf9;
+    --blue-tint: #e8f4fd; --blue-tint-bd: #c9e5f9;
+    --produced: #2e7d32; --produced-bg: #edf7ed; --produced-bd: #cde8ce;
+    --partial: #a86403; --partial-bg: #fff8e1; --partial-bd: #f3e2b0;
+    --notprod: #ba0517; --notprod-bg: #fef0f0; --notprod-bd: #f5c0c0;
+    --na: #706e6b; --na-bg: #f3f3f3;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-hero: 0 4px 16px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: var(--font);
+    color: var(--ink);
+    background: #f3f2f2; /* SLDS page canvas so the white card lifts */
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    padding: 40px 24px 64px;
+  }
+  .stage { max-width: 860px; margin: 0 auto; }
+  .stage-note {
+    font-size: 0.75rem; color: var(--muted); letter-spacing: 0.02em;
+    margin: 0 0 16px 4px;
+  }
+  .stage-note strong { color: var(--text-2); font-weight: 600; }
+
+  /* ============================ THE ONE CARD ============================ */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-hero);
+    overflow: hidden;
+  }
+
+  /* ---------------- ORIENTATION HEADER (WHO — quiet, Tier-3) ---------------- */
+  .head { padding: 26px 32px 22px; }
+  .eyebrow {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+  }
+  .eyebrow .sub { color: var(--brand-dark); }
+  .dot { width: 3px; height: 3px; border-radius: 50%; background: #c9c7c5; }
+  .status-pill {
+    text-transform: none; letter-spacing: 0; font-weight: 600;
+    color: var(--text-2); background: var(--recess);
+    border: 1px solid var(--border); border-radius: 100px;
+    padding: 2px 10px; font-size: 0.6875rem;
+  }
+  .applicant {
+    font-size: 1.625rem; line-height: 1.15; font-weight: 700;
+    letter-spacing: -0.02em; color: var(--ink); margin: 0;
+  }
+  .head-meta {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+    margin-top: 10px; font-size: 0.8125rem; color: var(--text-2);
+  }
+  .head-meta b { font-weight: 600; color: var(--ink); }
+  .head-meta .k { color: var(--muted); }
+  .chip {
+    font-weight: 600; color: var(--text-2); background: #fff;
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 1px 7px; font-size: 0.6875rem; letter-spacing: 0.02em;
+  }
+  .chip.geo { color: var(--brand-dark); background: var(--blue-tint); border-color: var(--blue-tint-bd); }
+  .head-ops {
+    margin-top: 12px; max-width: 720px;
+    font-size: 0.8125rem; color: var(--muted); line-height: 1.5;
+  }
+
+  /* ============ ZONE 1 — LINES OF BUSINESS (BEAT 1+2, DOMINANT) ============ */
+  .zone { padding: 24px 32px; border-top: 1px solid var(--border); }
+  .zone-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; margin-bottom: 14px;
+  }
+  .zone-title {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--brand-dark); margin: 0;
+  }
+  .scan-tally { font-size: 0.75rem; color: var(--muted); font-weight: 500; }
+  .scan-tally b { color: var(--ink); font-weight: 700; }
+  .scan-tally .g { color: var(--produced); font-weight: 700; }
+  .scan-tally .a { color: var(--partial); font-weight: 700; }
+
+  .rail { display: flex; flex-direction: column; gap: 8px; }
+
+  /* right-sized gradient LOB tile — the centerpiece (G13); repeatable component (§3.1) */
+  .rail-labels {
+    display: grid;
+    grid-template-columns: 22px minmax(0,1fr) 168px 132px;
+    gap: 14px; padding: 0 16px 6px 18px;
+  }
+  .rail-labels span {
+    font-size: 0.625rem; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .rail-labels .rl-exp { grid-column: 3; text-align: right; }
+  .rail-labels .rl-loss { grid-column: 4; text-align: right; }
+
+  .lob {
+    display: grid;
+    grid-template-columns: 22px minmax(0,1fr) 168px 132px;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px 12px 14px;
+    border: 1px solid var(--border);
+    border-left-width: 4px;
+    border-radius: 0 6px 6px 0;
+    background: var(--surface);
+    min-height: 58px;
+  }
+  .lob.s-produced { border-left-color: var(--produced); border-color: var(--produced-bd) var(--border) var(--produced-bd) var(--produced); background: linear-gradient(90deg, var(--produced-bg) 0%, #ffffff 62%); }
+  .lob.s-partial  { border-left-color: var(--partial);  border-color: var(--partial-bd) var(--border) var(--partial-bd) var(--partial);   background: linear-gradient(90deg, var(--partial-bg) 0%, #ffffff 62%); }
+  .lob.s-notprod  { border-left-color: var(--notprod);  border-color: var(--notprod-bd) var(--border) var(--notprod-bd) var(--notprod);   background: linear-gradient(90deg, var(--notprod-bg) 0%, #ffffff 62%); }
+
+  /* status icon (color + icon + text — never color alone; word sits under name) */
+  .lob-ico { width: 22px; height: 22px; }
+  .lob-ico svg { width: 22px; height: 22px; display: block; }
+
+  .lob-id { min-width: 0; }
+  .lob-name {
+    font-size: 0.9375rem; font-weight: 600; color: var(--ink);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .lob-status {
+    margin-top: 3px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .lob.s-produced .lob-status { color: var(--produced); }
+  .lob.s-partial  .lob-status { color: var(--partial); }
+  .lob-status .note { color: var(--muted); font-weight: 400; letter-spacing: 0; }
+
+  /* ---- per-LOB FACET scan (§3.1): EXPOSURE + LOSS RUNS, each present?·count·total ---- */
+  .facet { text-align: right; min-width: 0; }
+  .facet.loss { border-left: 1px solid var(--border); padding-left: 14px; }
+  /* present exposure — the loud beat-2 number/count */
+  .facet .v {
+    font-size: 1.375rem; font-weight: 700; color: var(--ink);
+    letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums;
+  }
+  .facet .v .cur { font-size: 0.875rem; font-weight: 600; color: var(--text-2); vertical-align: 0.08em; margin-right: 1px; }
+  .facet .v .unit { font-size: 0.8125rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+  .facet .lab { font-size: 0.625rem; color: var(--muted); margin-top: 2px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .facet .sub { font-size: 0.6875rem; color: var(--muted); margin-top: 1px; }
+  /* HOLE — a missing/empty expected field reads instantly as absent (never a quiet blank) */
+  .flag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.75rem; font-weight: 700; border-radius: 4px; padding: 3px 8px;
+    letter-spacing: 0.01em; white-space: nowrap;
+  }
+  .flag svg { width: 12px; height: 12px; flex: none; }
+  .flag.amber { color: var(--partial); background: var(--partial-bg); border: 1px solid var(--partial-bd); }
+  .flag.red   { color: var(--notprod); background: var(--notprod-bg); border: 1px solid var(--notprod-bd); }
+  .flag.na    { color: var(--na); background: var(--na-bg); border: 1px solid var(--border); }
+  .facet .dash { color: var(--muted); font-weight: 700; font-size: 1rem; }
+
+  /* ============ ZONE 2 — LOSS RUNS (BEAT 3, co-loud RED gap, Tier-2) ============ */
+  .loss {
+    margin: 4px 32px 0;
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 20px;
+    background: linear-gradient(90deg, var(--notprod-bg) 0%, #ffffff 78%);
+    border: 1px solid var(--notprod-bd);
+    border-left: 4px solid var(--notprod);
+    border-radius: 0 8px 8px 0;
+  }
+  .loss-ico {
+    width: 40px; height: 40px; flex: none; border-radius: 50%;
+    background: #fff; border: 1px solid var(--notprod-bd);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .loss-ico svg { width: 24px; height: 24px; }
+  .loss-txt { min-width: 0; flex: 1; }
+  .loss-title {
+    font-size: 1.375rem; font-weight: 700; color: var(--notprod);
+    letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .loss-flag {
+    font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; color: #fff; background: var(--notprod);
+    border-radius: 4px; padding: 3px 8px;
+  }
+  .loss-sub { font-size: 0.8125rem; color: var(--text-2); margin-top: 4px; }
+  .loss-eyebrow {
+    font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 6px;
+  }
+
+  /* ---------------- STATUS LEGEND (quiet, plain words §4) ---------------- */
+  .legend {
+    margin: 20px 32px 4px;
+    padding: 14px 16px;
+    background: var(--recess); border: 1px solid var(--border);
+    border-radius: 6px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 24px;
+  }
+  .leg { display: flex; gap: 9px; }
+  .leg-sw { width: 4px; border-radius: 2px; flex: none; margin-top: 2px; }
+  .leg.l-produced .leg-sw { background: var(--produced); }
+  .leg.l-partial  .leg-sw { background: var(--partial); }
+  .leg.l-notprod  .leg-sw { background: var(--notprod); }
+  .leg-w { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em; }
+  .leg.l-produced .leg-w { color: var(--produced); }
+  .leg.l-partial  .leg-w { color: var(--partial); }
+  .leg.l-notprod  .leg-w { color: var(--notprod); }
+  .leg-d { font-size: 0.75rem; color: var(--muted); line-height: 1.4; margin-top: 1px; }
+
+  /* ---------------- SUPPORTING CONTEXT (quietest, Tier-3) ---------------- */
+  .foot {
+    margin-top: 20px; padding: 20px 32px 26px;
+    border-top: 1px solid var(--border);
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 32px;
+  }
+  .foot dl { margin: 0; }
+  .foot dt {
+    font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 3px;
+  }
+  .foot dd { margin: 0; font-size: 0.8125rem; color: var(--ink); font-weight: 500; }
+  .foot dd .li { display: block; color: var(--text-2); font-weight: 400; }
+  .foot dd .li + .li { margin-top: 2px; }
+  .foot .wide { grid-column: span 2; }
+
+  /* ---------------- RESPONSIVE ---------------- */
+  @media (max-width: 720px) {
+    .foot { grid-template-columns: repeat(2, 1fr); }
+    .foot .wide { grid-column: span 2; }
+    .legend { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .rail-labels { display: none; }
+    .lob {
+      grid-template-columns: 22px 1fr;
+      row-gap: 10px; align-items: start;
+    }
+    .facet {
+      grid-column: 2 / -1; text-align: left;
+      display: flex; align-items: baseline; gap: 8px;
+    }
+    .facet.loss { border-left: 0; padding-left: 0; }
+    .facet .lab { margin-top: 0; }
+    .facet .lab::after { content: ""; }
+    .facet::before {
+      content: attr(data-facet); flex: none; width: 84px;
+      font-size: 0.625rem; font-weight: 700; letter-spacing: 0.05em;
+      text-transform: uppercase; color: var(--muted); align-self: center;
+    }
+  }
+  @media (max-width: 560px) {
+    body { padding: 20px 12px 40px; }
+    .head, .zone { padding-left: 20px; padding-right: 20px; }
+    .loss, .legend { margin-left: 20px; margin-right: 20px; }
+    .applicant { font-size: 1.375rem; }
+    .loss-title { font-size: 1.125rem; }
+    .foot { grid-template-columns: 1fr; padding-left: 20px; padding-right: 20px; }
+    .foot .wide { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <p class="stage-note"><strong>Concept 02 — Priority Ranked.</strong> One card, read top-to-bottom in scan order: <strong>lines &amp; exposures &rarr; loss runs &rarr; context</strong>. Rendering <strong>A&nbsp;&amp;&nbsp;B Painting,&nbsp;Inc. — SUB&nbsp;022667</strong>.</p>
+
+  <article class="card" aria-label="Submission summary — A & B Painting, Inc.">
+
+    <!-- ============ ORIENTATION HEADER — WHO (quiet, Tier-3) ============ -->
+    <header class="head">
+      <div class="eyebrow">
+        <span class="sub">SUB&nbsp;022667</span>
+        <span class="dot"></span>
+        <span class="status-pill">Clearance Requested</span>
+        <span class="dot"></span>
+        <span>New</span>
+      </div>
+      <h1 class="applicant">A&nbsp;&amp;&nbsp;B Painting,&nbsp;Inc.</h1>
+      <div class="head-meta">
+        <span><b>3</b> <span class="k">named insureds</span></span>
+        <span class="dot"></span>
+        <span class="chip geo">CA</span>
+        <span class="chip geo">HI</span>
+        <span class="dot"></span>
+        <span class="chip">R2 Solutions</span>
+        <span class="chip">Chubb</span>
+        <span class="chip">TPA ESIS</span>
+      </div>
+      <p class="head-ops">Painting and wall-covering services for commercial and public projects; works as a subcontractor under competitive-bid / fixed-price contracts; greater Northern California; union workforce.</p>
+    </header>
+
+    <!-- ============ ZONE 1 — LINES OF BUSINESS + EXPOSURES (BEAT 1+2, DOMINANT) ============ -->
+    <section class="zone" aria-label="Lines of business and exposures">
+      <div class="zone-head">
+        <h2 class="zone-title">Lines of Business &amp; Exposures</h2>
+        <span class="scan-tally"><span class="g">4 Produced</span> &nbsp;·&nbsp; <span class="a">1 Partial</span> &nbsp;·&nbsp; <b>0</b> Not produced</span>
+      </div>
+
+      <!-- column labels for the per-LOB scan (§3.1): each LOB shows EXPOSURE + LOSS RUNS -->
+      <div class="rail-labels" aria-hidden="true">
+        <span class="rl-exp">Exposure</span>
+        <span class="rl-loss">Loss runs</span>
+      </div>
+
+      <!-- repeatable component: one <template for:each={lobs}> row in the LWC (scales 3/5/7+) -->
+      <div class="rail">
+
+        <!-- 1 · Workers' Compensation CA -->
+        <div class="lob s-produced">
+          <span class="lob-ico" aria-hidden="true">
+            <svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#2e7d32"/><path d="M6.6 11.3l2.9 2.9L15.6 8" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <div class="lob-id">
+            <div class="lob-name">Workers' Compensation <span class="chip geo">CA</span></div>
+            <div class="lob-status">Produced</div>
+          </div>
+          <div class="facet" data-facet="Exposure">
+            <div class="v"><span class="cur">$</span>4,928,350</div>
+            <div class="lab">Payroll total</div>
+          </div>
+          <div class="facet loss" data-facet="Loss runs">
+            <span class="flag red">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.6 6.6l6.8 6.8M13.4 6.6l-6.8 6.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Not produced
+            </span>
+          </div>
+        </div>
+
+        <!-- 2 · General Liability CA -->
+        <div class="lob s-produced">
+          <span class="lob-ico" aria-hidden="true">
+            <svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#2e7d32"/><path d="M6.6 11.3l2.9 2.9L15.6 8" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <div class="lob-id">
+            <div class="lob-name">General Liability <span class="chip geo">CA</span></div>
+            <div class="lob-status">Produced</div>
+          </div>
+          <div class="facet" data-facet="Exposure">
+            <div class="v"><span class="cur">$</span>8,500,000</div>
+            <div class="lab">Revenue total</div>
+            <div class="sub">incl. $1,050,000 subcontracted</div>
+          </div>
+          <div class="facet loss" data-facet="Loss runs">
+            <span class="flag red">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.6 6.6l6.8 6.8M13.4 6.6l-6.8 6.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Not produced
+            </span>
+          </div>
+        </div>
+
+        <!-- 3 · Commercial Auto CA (natural count = power units; no dollar total) -->
+        <div class="lob s-produced">
+          <span class="lob-ico" aria-hidden="true">
+            <svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#2e7d32"/><path d="M6.6 11.3l2.9 2.9L15.6 8" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <div class="lob-id">
+            <div class="lob-name">Commercial Auto <span class="chip geo">CA</span></div>
+            <div class="lob-status">Produced</div>
+          </div>
+          <div class="facet" data-facet="Exposure">
+            <div class="v">31 <span class="unit">power units</span></div>
+            <div class="lab">Fleet count</div>
+          </div>
+          <div class="facet loss" data-facet="Loss runs">
+            <span class="flag red">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.6 6.6l6.8 6.8M13.4 6.6l-6.8 6.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Not produced
+            </span>
+          </div>
+        </div>
+
+        <!-- 4 · Commercial Auto HI — SEPARATE LOB (Hawaii needs its own policy) -->
+        <div class="lob s-produced">
+          <span class="lob-ico" aria-hidden="true">
+            <svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#2e7d32"/><path d="M6.6 11.3l2.9 2.9L15.6 8" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <div class="lob-id">
+            <div class="lob-name">Commercial Auto <span class="chip geo">HI</span></div>
+            <div class="lob-status">Produced <span class="note">· separate LOB — Hawaii needs its own policy</span></div>
+          </div>
+          <div class="facet" data-facet="Exposure">
+            <div class="v">2 <span class="unit">power units</span></div>
+            <div class="lab">Fleet count</div>
+          </div>
+          <div class="facet loss" data-facet="Loss runs">
+            <span class="flag red">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.6 6.6l6.8 6.8M13.4 6.6l-6.8 6.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Not produced
+            </span>
+          </div>
+        </div>
+
+        <!-- 5 · Excess Liability CA+HI — Partial: a specific expected field is empty (a HOLE) -->
+        <div class="lob s-partial">
+          <span class="lob-ico" aria-hidden="true">
+            <svg viewBox="0 0 22 22"><path d="M11 2.5l9.2 16.2H1.8z" fill="#a86403"/><rect x="10.05" y="8" width="1.9" height="5.4" rx="0.95" fill="#fff"/><circle cx="11" cy="15.6" r="1.1" fill="#fff"/></svg>
+          </span>
+          <div class="lob-id">
+            <div class="lob-name">Excess Liability <span class="chip geo">CA</span><span class="chip geo">HI</span></div>
+            <div class="lob-status">Partial <span class="note">· produced, one expected field empty</span></div>
+          </div>
+          <div class="facet" data-facet="Exposure">
+            <span class="flag amber">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l8.4 14.6H1.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><rect x="9.1" y="7.2" width="1.8" height="4.4" rx="0.9" fill="currentColor"/><circle cx="10" cy="14" r="1" fill="currentColor"/></svg>
+              No effective date
+            </span>
+            <div class="lab">Effective_Date empty</div>
+          </div>
+          <div class="facet loss" data-facet="Loss runs">
+            <span class="flag red">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.6 6.6l6.8 6.8M13.4 6.6l-6.8 6.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Not produced
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Commercial Auto roll-up context ONLY (no bar, G10): 31 CA + 2 HI = 33 power units total -->
+      <p style="margin:12px 0 0;font-size:0.75rem;color:var(--muted);">Commercial Auto totals <b style="color:var(--text-2);font-weight:600;">33 power units</b> across the two state LOBs (31 CA&nbsp;+&nbsp;2 HI).</p>
+    </section>
+
+    <!-- ============ ZONE 2 — LOSS RUNS (BEAT 3, co-loud RED gap, Tier-2) ============ -->
+    <!-- Submission / TPA-level roll-up headline. A&B = every loss field null → ABSENCE
+         (not zero): never render "0 claims / $0 incurred" (G12). When produced elsewhere
+         this band shows valuation date · # years · # claims · total incurred. -->
+    <div class="zone" style="padding-bottom:0;padding-top:22px;border-top:1px solid var(--border);">
+      <p class="loss-eyebrow">Loss History &nbsp;·&nbsp; submission-level</p>
+    </div>
+    <div class="loss" role="status" aria-label="Loss runs not produced">
+      <span class="loss-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#ba0517"/><rect x="10.9" y="5.6" width="2.2" height="7.6" rx="1.1" fill="#fff"/><circle cx="12" cy="17.2" r="1.35" fill="#fff"/></svg>
+      </span>
+      <div class="loss-txt">
+        <div class="loss-title">Loss runs <span class="loss-flag">Not produced</span></div>
+        <div class="loss-sub">No loss history was produced — no valuation date, no claims data on record. Expected from TPA <b style="color:var(--text-2);font-weight:600;">ESIS</b>; the gap is total across all lines and named insureds.</div>
+      </div>
+    </div>
+
+    <!-- ============ STATUS LEGEND (quiet, plain words §4) ============ -->
+    <div class="legend" role="note" aria-label="Status legend">
+      <div class="leg l-produced">
+        <span class="leg-sw" aria-hidden="true"></span>
+        <span><span class="leg-w">Produced</span><span class="leg-d">The line is present and its expected exposure was produced (WC payroll, GL revenue, an Auto vehicle schedule).</span></span>
+      </div>
+      <div class="leg l-partial">
+        <span class="leg-sw" aria-hidden="true"></span>
+        <span><span class="leg-w">Partial</span><span class="leg-d">Produced, but one specific expected field is verifiably empty — here, no effective date on record.</span></span>
+      </div>
+      <div class="leg l-notprod">
+        <span class="leg-sw" aria-hidden="true"></span>
+        <span><span class="leg-w">Not produced</span><span class="leg-d">The line is requested on the submission, but no data was produced for it — requested, nothing came back.</span></span>
+      </div>
+    </div>
+
+    <!-- ============ SUPPORTING CONTEXT (quietest, Tier-3) ============ -->
+    <footer class="foot" aria-label="Supporting context">
+      <dl class="wide">
+        <dt>Named Insureds (3)</dt>
+        <dd>
+          <span class="li">A &amp; B Painting, Inc.</span>
+          <span class="li">A &amp; B Painting West, Inc.</span>
+          <span class="li">ACR Commercial Drywall, Inc.</span>
+          <span class="li" style="color:var(--muted);margin-top:4px;">All classed Artisan Contractor</span>
+        </dd>
+      </dl>
+      <dl>
+        <dt>Broker · Carrier · TPA</dt>
+        <dd>R2 Solutions<span class="li">Chubb · Place</span><span class="li">TPA ESIS</span></dd>
+      </dl>
+      <dl>
+        <dt>Effective</dt>
+        <dd>07/01/2026 – 07/01/2027</dd>
+        <dt style="margin-top:14px;">Avg. Employment</dt>
+        <dd>50</dd>
+      </dl>
+      <dl class="wide">
+        <dt>Locations (2)</dt>
+        <dd>
+          <span class="li">672 Walsh Ave, Santa Clara, CA 95050</span>
+          <span class="li">2270 Palou Ave, San Francisco, CA 94124</span>
+        </dd>
+      </dl>
+    </footer>
+
+  </article>
+</div>
+</body>
+</html>

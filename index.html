@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Astrus Submission Summary — Design Round 2</title>
+<title>Astrus Submission Summary — Design Round 3</title>
 <style>
-  /* LIGHT MODE ONLY. No dark styling of any kind; no theme switching (Round-2 law). */
+  /* LIGHT MODE ONLY. No dark styling of any kind; no theme switching (Golden Standard G6). */
   :root {
     --brand:      #0176d3;
     --brand-dark: #032d60;
@@ -94,7 +94,7 @@
   header.hero p.lede {
     margin: 0;
     font-size: clamp(1rem, 1.4vw, 1.15rem);
-    max-width: 74ch;
+    max-width: 76ch;
     color: rgba(255,255,255,.93);
   }
 
@@ -144,7 +144,7 @@
 
   /* ---- Intro ---- */
   .intro { margin-bottom: 2rem; }
-  .intro p { margin: 0 0 .85rem; max-width: 80ch; color: var(--text-2); }
+  .intro p { margin: 0 0 .85rem; max-width: 82ch; color: var(--text-2); }
   .intro strong { color: var(--brand-dark); }
 
   /* ---- Legend ---- */
@@ -159,7 +159,7 @@
     margin: 1.25rem 0 0;
     font-size: .8125rem;
   }
-  .legend .li { display: flex; align-items: flex-start; gap: .55rem; max-width: 32ch; }
+  .legend .li { display: flex; align-items: flex-start; gap: .55rem; max-width: 34ch; }
   .legend .sw { width: .85rem; height: .85rem; border-radius: 3px; flex: none; margin-top: .15rem; }
   .legend .sw.g { background: var(--produced); }
   .legend .sw.a { background: var(--partial); }
@@ -265,19 +265,20 @@
   .open-btn:hover { background: color-mix(in srgb, var(--brand) 82%, #000); }
   .open-btn:focus-visible { outline: 2px solid var(--brand-dark); outline-offset: 2px; }
 
-  /* ---- Round 1 archive ---- */
+  /* ---- Archive (prior rounds) ---- */
   .archive {
     margin-top: 3.5rem;
     padding-top: 1.75rem;
     border-top: 1px solid var(--border);
   }
+  .archive + .archive { margin-top: 2rem; padding-top: 1.5rem; }
   .archive h2 {
     font-size: .9375rem;
     font-weight: 700;
     color: var(--muted);
     margin: 0 0 .35rem;
   }
-  .archive p { font-size: .8125rem; color: var(--muted); margin: 0 0 1rem; max-width: 72ch; }
+  .archive p { font-size: .8125rem; color: var(--muted); margin: 0 0 1rem; max-width: 74ch; }
   .archive-list { display: flex; flex-wrap: wrap; gap: .6rem; }
   .archive-list a {
     font-size: .8125rem;
@@ -313,14 +314,14 @@
   <div class="breadcrumb">
     <span class="home">Astrus</span><span class="sep">›</span>
     <span>Design Workshops</span><span class="sep">›</span>
-    <span>Submission Summary — Round 2</span>
+    <span>Submission Summary — Round 3</span>
   </div>
 
   <header class="hero">
     <div class="hero-inner">
-      <span class="eyebrow">Design Round 2 · 6 New Concepts</span>
+      <span class="eyebrow">Design Round 3 · 4 Converged Concepts</span>
       <h1>Astrus Submission Summary</h1>
-      <p class="lede">Six new design concepts for the <strong>at-a-glance summary</strong> pinned to the top of an Astrus insurance submission in Salesforce — a beautiful, highly informative snapshot of <strong>what the submission contains and which lines of business were produced</strong>. Every concept renders the same live sample submission so they compare head-to-head, and each is realistically buildable as a light-mode Lightning Web Component.</p>
+      <p class="lede">Four tight variations on one direction: a single, beautiful Salesforce card pinned to the top of an Astrus submission that an underwriter reads in <strong>one glance</strong> — instantly seeing, line of business by line of business, <strong>what was produced and what is missing</strong> across the two things they care about most: <strong>exposures</strong> and <strong>loss runs</strong>. Each concept renders the same live submission and is buildable as a light-mode Lightning Web Component.</p>
     </div>
   </header>
 
@@ -330,63 +331,71 @@
       <div class="facts">
         <span class="chip"><span class="dot"></span>A &amp; B Painting, Inc. · SUB 022667</span>
         <span class="chip">3 named insureds · New · Artisan Contractor</span>
-        <span class="chip">Term 07/01/2026 – 07/01/2027</span>
-        <span class="chip">CA + HI · Broker R2 Solutions · Chubb</span>
+        <span class="chip">CA + HI · Broker R2 Solutions · Chubb · TPA ESIS</span>
         <span class="chip green"><span class="dot"></span>WC payroll $4,928,350</span>
-        <span class="chip green"><span class="dot"></span>GL revenue $8,500,000</span>
-        <span class="chip green"><span class="dot"></span>Commercial Auto 33 vehicles</span>
-        <span class="chip amber"><span class="dot"></span>Excess Liability — Partial</span>
+        <span class="chip green"><span class="dot"></span>GL revenue $8,500,000 (+$1.05M sub)</span>
+        <span class="chip green"><span class="dot"></span>Commercial Auto — CA 31 · HI 2 power units</span>
+        <span class="chip amber"><span class="dot"></span>Excess Liability — Partial (no effective date)</span>
         <span class="chip red"><span class="dot"></span>Loss runs — Not produced</span>
       </div>
     </section>
 
     <section class="intro">
-      <p>This gallery presents candidate designs for a single high-signal panel that answers an underwriter's first questions in seconds: <strong>who is the applicant, which lines of business were produced, what are the key exposures, and are the loss runs here?</strong> The design centers on the priorities underwriters actually named — named insured first, then lines of business (&ldquo;boom, boom, boom&rdquo;) with a crisp per-LOB <strong>PRODUCED</strong> status, then the exposure inside each LOB, then the loss-run flag.</p>
+      <p>These candidates answer an underwriter's first questions before they open the file: <strong>who is the applicant, which lines of business are on the submission, is each line's exposure present (and how much), and are the loss runs here?</strong> The organizing axis is the <strong>line of business</strong>; under each one the card shows a present / count / total scan for <strong>exposure</strong> and for <strong>loss runs</strong>, so the whole picture reads &ldquo;exposures are here, loss runs are missing&rdquo; in seconds. The four differ only in layout and hierarchy — not in metaphor. All are one cohesive card (not a dashboard), light mode only, no charts-for-charts'-sake, no filler.</p>
 
       <div class="legend" aria-label="Per-line-of-business status legend">
-        <div class="li"><span class="sw g"></span><span><b>Produced</b> — <span class="t">the LOB is present and its expected exposure was produced (WC has payroll, GL has revenue, Auto has a vehicle schedule).</span></span></div>
-        <div class="li"><span class="sw a"></span><span><b>Partial</b> — <span class="t">the LOB was produced, but a specific expected element is verifiably empty (e.g. no effective date).</span></span></div>
-        <div class="li"><span class="sw r"></span><span><b>Not produced</b> — <span class="t">the LOB is on the submission but no data was produced for it. Requested, but nothing came back.</span></span></div>
+        <div class="li"><span class="sw g"></span><span><b>Produced</b> — <span class="t">the line is present and its expected item was produced (WC payroll, GL revenue, an Auto power-unit count, or a loss run).</span></span></div>
+        <div class="li"><span class="sw a"></span><span><b>Partial</b> — <span class="t">produced, but a specific expected field is verifiably empty (here, no effective date).</span></span></div>
+        <div class="li"><span class="sw r"></span><span><b>Not produced</b> — <span class="t">the item was requested on the submission but nothing came back (here, every line's loss runs).</span></span></div>
       </div>
     </section>
 
-    <h2 class="section-label">The six concepts</h2>
+    <h2 class="section-label">The four concepts</h2>
     <div class="grid" id="grid"></div>
 
+    <section class="archive" aria-label="Round 2 archive">
+      <h2>Round 2 — superseded</h2>
+      <p>The six round-2 concepts, kept for reference. Feedback: tiles too big, some read as dashboards or card-stacks, and priority/importance wasn't being communicated — so round 3 converges on one card with right-sized gradient LOB tiles and a present/missing scan.</p>
+      <div class="archive-list" id="archive-v2"></div>
+    </section>
+
     <section class="archive" aria-label="Round 1 archive">
-      <h2>Round 1 — superseded by feedback</h2>
-      <p>The original six concepts, kept for reference. Round-2 feedback removed dark mode, extraction-confidence, reprocessing controls, tabs, and the timeline/story and split-ledger layouts — so these are archived, not featured.</p>
-      <div class="archive-list" id="archive"></div>
+      <h2>Round 1 — superseded</h2>
+      <p>The original six concepts. Round-2 feedback removed dark mode, extraction-confidence, reprocessing controls, tabs, and the timeline/story and split-ledger layouts — so these are archived, not featured.</p>
+      <div class="archive-list" id="archive-v1"></div>
     </section>
   </main>
 
   <footer>
-    <p>These are <strong>static HTML/CSS mockups</strong> of a future Lightning Web Component — hand-rolled to match SLDS tokens, type ladder, and status semantics, with no external frameworks, fonts, or CDNs. Every pattern maps to a real LWC (base <code>lightning-*</code> components, Lightning Data Service, inline SVG/CSS). Light mode only. Sample data reflects the alliantinsurance--qa record SUB 022667.</p>
+    <p>These are <strong>static HTML/CSS mockups</strong> of a future Lightning Web Component — hand-rolled to match SLDS tokens, type ladder, and status semantics, with no external frameworks, fonts, or CDNs. Every pattern maps to a real LWC (base <code>lightning-*</code> components, Lightning Data Service, inline SVG/CSS, CSS gradients in the scoped stylesheet). Light mode only. Sample data reflects the alliantinsurance--qa record SUB 022667.</p>
   </footer>
 
 <script>
   const CONCEPTS = [
-    { n:"01", slug:"01-coverage-status-board.html", name:"Coverage Status Board",
-      thesis:"The evolved per-LOB &ldquo;boom boom boom&rdquo; — each line of business a status card (Produced / Partial / Not produced) with its exposure figure baked in, a plain-words legend, and the loss-run flag.",
-      job:"At a glance, which lines of business were produced, and where's the gap?" },
-    { n:"02", slug:"02-executive-hero.html", name:"Executive Hero",
-      thesis:"One cinematic hero: the applicant name huge, a 4–6 KPI strip, a compact LOB status rail, and the loss-run &ldquo;Not produced&rdquo; flag that pops.",
-      job:"Give me the headline of this submission in a single confident glance." },
-    { n:"03", slug:"03-exposure-first.html", name:"Exposure-First",
-      thesis:"Lead with the money: headline exposures as the biggest figures with one honest stacked exposure-mix micro-viz, and LOB status attached to each figure.",
-      job:"How big is this account and where does the exposure sit?" },
-    { n:"04", slug:"04-underwriter-datasheet.html", name:"Underwriter Datasheet",
-      thesis:"The listed brief made genuinely beautiful: a disciplined definition-grid of facts plus a quiet vehicle-schedule table — elegance from type, spacing and alignment restraint.",
-      job:"Read the file the way I'd brief a colleague — clean, complete, scannable." },
-    { n:"05", slug:"05-priority-signal-cards.html", name:"Priority Signal Cards",
-      thesis:"The underwriter's ranked checklist as a curated set of signal cards in emphasis order (who → LOBs → exposures → loss runs → context), each card one clear signal.",
-      job:"Walk me down the priorities, most important first." },
-    { n:"06", slug:"06-coverage-map.html", name:"Coverage Map",
-      thesis:"A spatial overview: a state × line-of-business coverage matrix showing what's produced where (CA / HI), with exposures and the loss-run flag around it.",
-      job:"What coverage was produced in which state?" },
+    { n:"01", slug:"01-lob-tile-grid.html", name:"LOB Tile Grid",
+      thesis:"Gradient line-of-business tiles as the hero — a tidy, right-sized grid where each tile carries a per-LOB present / count / total scan for both exposure and loss runs, with the loss-history gap called out in a prominent band alongside.",
+      job:"Which lines are produced, what's the exposure, and where's the gap?" },
+    { n:"02", slug:"02-priority-ranked.html", name:"Priority Ranked",
+      thesis:"One card that flows top-to-bottom in the underwriter's scan order — lines of business and their exposures first, then the loss-run status, then quiet context — with visual weight tapering as priority drops.",
+      job:"Walk me down what matters, most important first." },
+    { n:"03", slug:"03-exposure-led.html", name:"Exposure Led",
+      thesis:"Leads with the money — headline exposures up top — then resolves into the same right-sized gradient LOB tiles and a first-class loss-history band. One card, deliberately not a dashboard.",
+      job:"How big is this account, and are the loss runs here?" },
+    { n:"04", slug:"04-compact-executive.html", name:"Compact Executive",
+      thesis:"The refined best-of round-2's Executive Hero: filler removed (no fleet bar, no Term, no LOB-count), the gradient tiles kept and right-sized, each with its exposure + loss-run scan, and loss history promoted to a first-class element.",
+      job:"Give me the headline of this submission in one confident glance." },
   ];
 
-  const ARCHIVE = [
+  const ARCHIVE_V2 = [
+    { slug:"01-coverage-status-board.html", name:"Coverage Status Board" },
+    { slug:"02-executive-hero.html",        name:"Executive Hero" },
+    { slug:"03-exposure-first.html",        name:"Exposure-First" },
+    { slug:"04-underwriter-datasheet.html", name:"Underwriter Datasheet" },
+    { slug:"05-priority-signal-cards.html", name:"Priority Signal Cards" },
+    { slug:"06-coverage-map.html",          name:"Coverage Map" },
+  ];
+
+  const ARCHIVE_V1 = [
     { slug:"01-command-center.html",       name:"Command Center" },
     { slug:"02-underwriter-brief.html",    name:"Underwriter Brief" },
     { slug:"03-triage-traffic-light.html", name:"Triage Traffic-Light" },
@@ -404,13 +413,17 @@
       <p class="thesis">${c.thesis}</p>
       <p class="job"><b>Who it's for</b>${c.job}</p>
       <div class="card-footer">
-        <span class="badge-feas"><span class="dot"></span>LWC-feasible</span>
+        <span class="badge-feas"><span class="dot"></span>LWC-feasible · light-mode</span>
         <a class="open-btn" href="concepts/${c.slug}">Open concept &rarr;</a>
       </div>
     </article>
   `).join("");
 
-  document.getElementById("archive").innerHTML = ARCHIVE.map(a => `
+  document.getElementById("archive-v2").innerHTML = ARCHIVE_V2.map(a => `
+    <a href="concepts/v2/${a.slug}">${a.name} <span class="old">· v2</span></a>
+  `).join("");
+
+  document.getElementById("archive-v1").innerHTML = ARCHIVE_V1.map(a => `
     <a href="concepts/v1/${a.slug}">${a.name} <span class="old">· v1</span></a>
   `).join("");
 </script>
