@@ -1,0 +1,584 @@
+<!--
+  CONCEPT 02 — "UNDERWRITER BRIEF"  (Astrus at-a-glance submission summary)
+  ------------------------------------------------------------------------
+  DESIGN CONSTRAINT (from the Josh/Rich call): NOT a free-text LLM summary.
+  This is a DETERMINISTIC BRIEFING — a standardized, template-filled readout with the SAME
+  sentence skeleton every time; only the slotted values change. Zero variability. The single
+  italic "AI summary (secondary)" line is the ONLY generative accent, and it is visibly
+  deprioritized.
+
+  LWC MAPPING (maps 1:1 to a real Lightning Web Component):
+    • Root card ............ lightning-card
+    • Templated sentences .. getter-composed strings from LDS field values (deterministic);
+                            rendered via lightning-formatted-rich-text — NOT an LLM call.
+    • Severity chips ....... lightning-badge (green ≥90 / amber 70–89 / red <70)
+    • Confidence ring ...... lightning-progress-ring (inline SVG donut here)
+    • Secondary AI note .... ONE cached text field (Astrus_AI_Note__c), clearly labeled secondary
+    • Reprocess controls ... lightning-button + lightning-input(checkbox); confirm = lightning-modal
+    • Data source .......... LDS getRecord/getFieldValue; reason codes via imperative Apex @wire;
+                            "Reprocess" fires the Astrus_Submission_Update__e platform event.
+    • No CDNs / frameworks / external fonts — LWS-safe, offline, GitHub-Pages ready.
+-->
+<style>
+  :root {
+    --brand: #0176d3; --brand-dark: #032d60;
+    --tint-1: #f3f8fe; --tint-2: #eaf2fc; --tint-3: #dbeafe;
+    --success: #2e7d32; --warning: #f57f17; --error: #b71c1c;
+    --neutral-text: #181818; --neutral-muted: #5c5c5c;
+    --border: #e5e5e5; --surface: #ffffff; --page-bg: #f3f3f3;
+    --shadow: 0 2px 4px rgba(0,0,0,.08); --shadow-lg: 0 4px 16px rgba(0,0,0,.16);
+    --radius: 0.25rem;
+    --success-bg: #edf7ee; --warning-bg: #fef6e6; --error-bg: #fdecec;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  :root[data-theme="dark"] {
+    --brand: #1b96ff; --brand-dark: #90c8ff;
+    --tint-1: #22252a; --tint-2: #262b31; --tint-3: #2b3644;
+    --success: #4caf50; --warning: #ffb300; --error: #ef5350;
+    --neutral-text: #f3f3f3; --neutral-muted: #b0b0b0;
+    --border: #3a3a3a; --surface: #1b1b1b; --page-bg: #131313;
+    --shadow: 0 2px 4px rgba(0,0,0,.5); --shadow-lg: 0 4px 16px rgba(0,0,0,.6);
+    --success-bg: #1c2a1d; --warning-bg: #2e2712; --error-bg: #2e1a1a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --brand: #1b96ff; --brand-dark: #90c8ff;
+      --tint-1: #22252a; --tint-2: #262b31; --tint-3: #2b3644;
+      --success: #4caf50; --warning: #ffb300; --error: #ef5350;
+      --neutral-text: #f3f3f3; --neutral-muted: #b0b0b0;
+      --border: #3a3a3a; --surface: #1b1b1b; --page-bg: #131313;
+      --shadow: 0 2px 4px rgba(0,0,0,.5); --shadow-lg: 0 4px 16px rgba(0,0,0,.6);
+      --success-bg: #1c2a1d; --warning-bg: #2e2712; --error-bg: #2e1a1a;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--page-bg); color: var(--neutral-text);
+    line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+  .lightning-shell { max-width: 940px; margin: 0 auto; padding: 0 1rem 3rem; }
+  .breadcrumb-bar { display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; padding: 0.75rem 0.25rem; flex-wrap: wrap; }
+  .breadcrumb { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8125rem;
+    color: var(--neutral-muted); font-weight: 600; }
+  .breadcrumb .crumb-obj { color: var(--brand); }
+  .breadcrumb svg { width: 14px; height: 14px; opacity: .7; }
+  .theme-toggle { display: inline-flex; align-items: center; gap: 0.4rem; border: 1px solid var(--border);
+    background: var(--surface); color: var(--neutral-text); border-radius: 999px; padding: 0.35rem 0.8rem;
+    font-size: 0.8125rem; font-weight: 600; cursor: pointer; box-shadow: var(--shadow); }
+  .theme-toggle:hover { border-color: var(--brand); }
+  .theme-toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .theme-toggle svg { width: 15px; height: 15px; }
+
+  .cmp-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+
+  /* title line */
+  .brief-header { display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;
+    padding: 1rem 1.5rem; background: linear-gradient(180deg, var(--tint-2), var(--surface));
+    border-bottom: 1px solid var(--border); }
+  .brief-header .obj-icon { width: 40px; height: 40px; border-radius: var(--radius); background: var(--brand);
+    color: #fff; flex: none; display: flex; align-items: center; justify-content: center; }
+  .brief-header .obj-icon svg { width: 22px; height: 22px; }
+  .brief-title-wrap { flex: 1 1 auto; min-width: 0; }
+  .brief-eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--neutral-muted); }
+  .brief-title { margin: 0; font-size: 1.375rem; font-weight: 700; color: var(--brand-dark); line-height: 1.2; }
+  .header-actions { display: flex; align-items: center; gap: 0.6rem; }
+
+  .pill { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 700;
+    border-radius: 999px; padding: 0.25rem 0.6rem; white-space: nowrap; }
+  .pill-status { background: var(--tint-3); color: var(--brand-dark); }
+  .pill-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .sev-green { background: var(--success-bg); color: var(--success); }
+  .sev-amber { background: var(--warning-bg); color: var(--warning); }
+  .sev-red   { background: var(--error-bg);   color: var(--error); }
+  .sev-green .pill-dot { background: var(--success); }
+  .sev-amber .pill-dot { background: var(--warning); }
+  .sev-red .pill-dot   { background: var(--error); }
+
+  .bell-btn { position: relative; border: 1px solid var(--border); background: var(--surface);
+    color: var(--neutral-text); width: 38px; height: 38px; border-radius: var(--radius);
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .bell-btn:hover { border-color: var(--brand); }
+  .bell-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .bell-btn svg { width: 20px; height: 20px; }
+  .bell-badge { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px;
+    border-radius: 999px; background: var(--error); color: #fff; font-size: 0.6875rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; border: 2px solid var(--surface); }
+  .bell-wrap { position: relative; }
+  .bell-tooltip { position: absolute; top: 46px; right: 0; z-index: 30; width: 260px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg);
+    padding: 0.75rem; text-align: left; display: none; font-size: 0.8125rem; }
+  .bell-wrap.open .bell-tooltip { display: block; }
+  .bell-tooltip .tt-title { font-weight: 700; color: var(--brand-dark); margin-bottom: 0.25rem; }
+  .bell-tooltip .tt-file { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem;
+    background: var(--tint-1); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 0.4rem 0.5rem; font-weight: 600; }
+  .bell-tooltip .tt-file svg { width: 15px; height: 15px; flex: none; color: var(--brand); }
+
+  /* determinism banner */
+  .determinism-bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1.5rem;
+    background: var(--tint-3); border-bottom: 1px solid var(--border); font-size: 0.75rem; font-weight: 600;
+    color: var(--brand-dark); }
+  .determinism-bar svg { width: 15px; height: 15px; flex: none; }
+
+  /* briefing blocks */
+  .brief-body { padding: 0.5rem 1.5rem 1.25rem; }
+  .brief-block { display: grid; grid-template-columns: 130px 1fr; gap: 0.75rem 1rem; align-items: start;
+    padding: 0.9rem 0; border-bottom: 1px solid var(--border); }
+  .brief-block:last-of-type { border-bottom: none; }
+  .block-label { display: flex; align-items: center; gap: 0.45rem; font-size: 0.8125rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .03em; color: var(--brand);
+    padding-left: 0.6rem; border-left: 4px solid var(--brand); }
+  .block-label svg { width: 15px; height: 15px; flex: none; }
+  .block-sentence { font-size: 1rem; color: var(--neutral-text); }
+  .block-sentence .val { font-weight: 700; color: var(--brand-dark); font-variant-numeric: tabular-nums; }
+  .block-sentence .chip-inline { margin-left: 0.35rem; vertical-align: 1px; }
+  .block-sentence .jump {
+    background: none; border: none; padding: 0; margin: 0; cursor: pointer; font: inherit;
+    color: var(--brand); font-weight: 700; text-decoration: underline; text-underline-offset: 2px;
+  }
+  .block-sentence .jump:hover { color: var(--brand-dark); }
+  .block-sentence .jump:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .sec-line { margin-top: 0.4rem; font-size: 0.875rem; }
+  .conf-inline { display: inline-flex; align-items: center; gap: 0.4rem; vertical-align: middle; }
+  .conf-inline svg { flex: none; }
+
+  /* secondary AI note — visibly deprioritized */
+  .ai-note { margin: 0.25rem 1.5rem 1.25rem; padding: 0.7rem 0.9rem; background: var(--tint-1);
+    border: 1px dashed var(--border); border-radius: var(--radius); }
+  .ai-note .ai-label { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.65rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--neutral-muted);
+    margin-bottom: 0.25rem; }
+  .ai-note .ai-label svg { width: 12px; height: 12px; }
+  .ai-note p { margin: 0; font-style: italic; font-size: 0.875rem; color: var(--neutral-muted); }
+
+  /* reprocess / actions zone (shared pattern) */
+  .actions-zone { border-top: 2px solid var(--border); background: var(--tint-1); padding: 1.1rem 1.5rem 1.25rem; }
+  .actions-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.85rem; }
+  .actions-head svg { width: 18px; height: 18px; color: var(--brand); }
+  .actions-head h3 { margin: 0; font-size: 1.125rem; font-weight: 700; color: var(--brand-dark); }
+  .actions-head .muted-tag { font-size: 0.75rem; font-weight: 600; color: var(--neutral-muted); }
+  .actions-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.25rem; }
+  @media (max-width: 780px) { .actions-grid { grid-template-columns: 1fr; } }
+
+  .scope-title, .files-title { font-size: 0.8125rem; font-weight: 700; color: var(--neutral-text);
+    margin: 0 0 0.5rem; text-transform: uppercase; letter-spacing: .03em; }
+  .scope-list { display: flex; flex-direction: column; gap: 0.4rem; }
+  .scope-item { display: flex; align-items: center; gap: 0.55rem; padding: 0.5rem 0.6rem;
+    border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+    cursor: pointer; font-size: 0.875rem; font-weight: 600; }
+  .scope-item:hover { border-color: var(--brand); }
+  .scope-item input { width: 16px; height: 16px; accent-color: var(--brand); cursor: pointer; }
+  .scope-item .lob-name { flex: 1 1 auto; }
+  .scope-item .lob-flag { font-size: 0.7rem; font-weight: 700; }
+
+  .premium-lock { margin-top: 0.85rem; display: flex; align-items: center; gap: 0.5rem; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 0.6rem 0.7rem; font-size: 0.8125rem; }
+  .premium-lock .lk { width: 16px; height: 16px; color: var(--neutral-muted); flex: none; }
+  .premium-lock .pl-label { font-weight: 600; color: var(--neutral-muted); }
+  .premium-lock .pl-val { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pl-tip { color: var(--neutral-muted); font-weight: 600; font-size: 0.75rem; margin-top: 0.4rem; display: block; }
+
+  .file-list { display: flex; flex-direction: column; gap: 0.4rem; }
+  .file-row { display: flex; align-items: center; gap: 0.55rem; padding: 0.5rem 0.6rem;
+    border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); font-size: 0.8125rem; }
+  .file-row .f-icon { width: 16px; height: 16px; color: var(--brand); flex: none; }
+  .file-row .f-name { flex: 1 1 auto; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-row.is-new { border-color: var(--success); background: var(--success-bg); }
+  .file-row .new-chip { font-size: 0.65rem; font-weight: 700; color: var(--success); background: var(--surface);
+    border: 1px solid var(--success); border-radius: 999px; padding: 0.05rem 0.4rem; flex: none; }
+  .unlink-btn { border: 1px solid var(--border); background: transparent; color: var(--neutral-muted);
+    border-radius: var(--radius); padding: 0.2rem 0.5rem; font-size: 0.7rem; font-weight: 700; cursor: pointer; flex: none; }
+  .unlink-btn:hover { border-color: var(--error); color: var(--error); }
+  .unlink-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .file-row.unlinked { opacity: .5; }
+  .file-row.unlinked .f-name { text-decoration: line-through; }
+  .admin-note { font-size: 0.7rem; color: var(--neutral-muted); margin-top: 0.6rem; }
+
+  .actions-cta { display: flex; align-items: center; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 0.45rem; border-radius: var(--radius); font-size: 0.875rem;
+    font-weight: 700; padding: 0.55rem 1.1rem; cursor: pointer; border: 1px solid transparent; }
+  .btn svg { width: 16px; height: 16px; }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { background: #014486; }
+  .btn-neutral { background: var(--surface); color: var(--brand); border-color: var(--border); }
+  .btn-neutral:hover { border-color: var(--brand); }
+  .btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .cta-note { font-size: 0.75rem; color: var(--neutral-muted); font-weight: 600; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; display: none;
+    align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg);
+    max-width: 480px; width: 100%; overflow: hidden; }
+  .modal-head { display: flex; align-items: center; gap: 0.6rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+  .modal-head svg { width: 20px; height: 20px; color: var(--brand); }
+  .modal-head h3 { margin: 0; font-size: 1.125rem; font-weight: 700; color: var(--brand-dark); }
+  .modal-body { padding: 1.25rem; font-size: 0.9rem; }
+  .modal-body ul { margin: 0.75rem 0 0; padding-left: 1.1rem; }
+  .modal-body li { margin-bottom: 0.35rem; }
+  .modal-body .hl { font-weight: 700; color: var(--brand-dark); }
+  .modal-foot { display: flex; justify-content: flex-end; gap: 0.6rem; padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border); background: var(--tint-1); }
+
+  .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--success); color: #fff; padding: 0.7rem 1.2rem; border-radius: var(--radius);
+    box-shadow: var(--shadow-lg); font-weight: 700; font-size: 0.875rem; z-index: 120; display: flex;
+    align-items: center; gap: 0.5rem; opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast svg { width: 18px; height: 18px; }
+
+  .note-card { margin-top: 1rem; background: var(--surface); border: 1px solid var(--border);
+    border-left: 4px solid var(--brand); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1rem 1.25rem; }
+  .note-card h4 { margin: 0 0 0.6rem; font-size: 1rem; font-weight: 700; color: var(--brand-dark); }
+  .note-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem 1.5rem; }
+  .note-item .nl { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--brand); margin-bottom: 0.15rem; }
+  .note-item .nv { font-size: 0.85rem; color: var(--neutral-text); }
+
+  @media (max-width: 560px) {
+    .brief-block { grid-template-columns: 1fr; gap: 0.35rem; }
+    .block-label { border-left: none; padding-left: 0; }
+  }
+  .scroll-flash { animation: flashBg 1.4s ease; }
+  @keyframes flashBg { 0%,100% { background: var(--tint-1); } 30% { background: var(--warning-bg); } }
+</style>
+
+<div class="lightning-shell">
+  <div class="breadcrumb-bar">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
+      <span>Astrus Submission</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+      <span class="crumb-obj">SUB 022667</span>
+    </nav>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle light or dark theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+      <span id="themeText">Dark</span>
+    </button>
+  </div>
+
+  <!-- =============== THE COMPONENT =============== -->
+  <div class="cmp-card" role="region" aria-label="Underwriter submission briefing">
+
+    <div class="brief-header">
+      <div class="obj-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 3h11l5 5v13H4z"/><path d="M14 3v6h6M8 13h8M8 17h6"/></svg>
+      </div>
+      <div class="brief-title-wrap">
+        <div class="brief-eyebrow">Submission Briefing</div>
+        <h1 class="brief-title">SUB 022667 · A &amp; B Painting, Inc.</h1>
+      </div>
+      <div class="header-actions">
+        <span class="pill pill-status" title="Status path: Pre-processed › Extraction Completed › Clearance Requested › Cleared">
+          <span class="pill-dot" style="background:var(--brand)"></span>Clearance Requested
+        </span>
+        <div class="bell-wrap" id="bellWrap">
+          <button class="bell-btn" id="bellBtn" aria-label="1 new notification" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            <span class="bell-badge">1</span>
+          </button>
+          <div class="bell-tooltip" role="dialog" aria-label="New file notification">
+            <div class="tt-title">1 new file received</div>
+            <div>A file just landed and may resolve an open item below.</div>
+            <div class="tt-file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+              Loss_Run_2021-2025.pdf
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="determinism-bar" title="Same sentence skeleton every submission — values are slotted from Salesforce fields, not generated.">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
+      Standardized readout — identical structure every submission. Values slotted from fields, not generated.
+    </div>
+
+    <!-- deterministic briefing blocks -->
+    <div class="brief-body">
+
+      <!-- COVERAGE -->
+      <div class="brief-block">
+        <div class="block-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Coverage</div>
+        <div class="block-sentence">
+          Received <span class="val">Workers' Compensation</span>, <span class="val">General Liability</span>, and <span class="val">Commercial Auto</span>. All expected lines present.
+          <span class="pill sev-green chip-inline"><span class="pill-dot"></span>Complete</span>
+        </div>
+      </div>
+
+      <!-- EXPOSURES -->
+      <div class="brief-block">
+        <div class="block-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7"/><rect x="13" y="7" width="3" height="11"/></svg>Exposures</div>
+        <div class="block-sentence">
+          WC payroll <span class="val">$4,928,350</span> and GL revenue <span class="val">$8,500,000</span> captured. Commercial Auto vehicle schedule is <span class="val">PARTIAL</span> — fleet history incomplete.
+          <span class="pill sev-amber chip-inline"><span class="pill-dot"></span>Auto partial</span>
+          <button class="jump" data-jump="scope">Reprocess Auto ↓</button>
+        </div>
+      </div>
+
+      <!-- LOSS HISTORY -->
+      <div class="brief-block">
+        <div class="block-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Loss History</div>
+        <div class="block-sentence">
+          <span class="val" style="color:var(--error)">No loss run received.</span> Valuation date not set.
+          <span class="pill sev-red chip-inline"><span class="pill-dot"></span>Missing</span>
+          <div class="sec-line">A new file <span class="val">Loss_Run_2021-2025.pdf</span> just arrived — <button class="jump" data-jump="scope">reprocess to capture it ↓</button></div>
+        </div>
+      </div>
+
+      <!-- PARTIES -->
+      <div class="brief-block">
+        <div class="block-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Parties</div>
+        <div class="block-sentence">
+          <span class="val">3 named insureds</span>, not yet verified.
+          <span class="pill sev-amber chip-inline"><span class="pill-dot"></span>Unverified</span>
+          <div class="sec-line">Submitting broker: <span class="val">R2 Solutions</span>. Target market: <span class="val">Chubb</span>.</div>
+        </div>
+      </div>
+
+      <!-- DATES -->
+      <div class="brief-block">
+        <div class="block-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Dates</div>
+        <div class="block-sentence">
+          Effective <span class="val">07/01/2026</span> – <span class="val">07/01/2027</span> <span style="color:var(--neutral-muted)">(12-month term)</span>. New business.
+        </div>
+      </div>
+
+      <!-- CONFIDENCE -->
+      <div class="brief-block">
+        <div class="block-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>Confidence</div>
+        <div class="block-sentence">
+          <span class="conf-inline">
+            <svg width="34" height="34" viewBox="0 0 34 34" role="img" aria-label="Overall extraction confidence 73.5 percent, amber">
+              <circle cx="17" cy="17" r="13" fill="none" stroke="var(--border)" stroke-width="4"/>
+              <circle cx="17" cy="17" r="13" fill="none" stroke="var(--warning)" stroke-width="4" stroke-linecap="round"
+                      stroke-dasharray="81.7" stroke-dashoffset="21.6" transform="rotate(-90 17 17)"/>
+            </svg>
+            Overall extraction confidence <span class="val">73.5%</span> — requires review.
+          </span>
+          <span class="pill sev-amber chip-inline"><span class="pill-dot"></span>Review</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- secondary AI note — the ONLY generative accent, deprioritized -->
+    <div class="ai-note">
+      <div class="ai-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+        AI summary (secondary)
+      </div>
+      <p>New-business painting contractor; primary open item is the missing loss run — a matching file has arrived and is ready to reprocess.</p>
+    </div>
+
+    <!-- ============ REPROCESSING / ACTIONS ZONE ============ -->
+    <div class="actions-zone" id="actionsZone">
+      <div class="actions-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+        <h3>Reprocess</h3>
+        <span class="muted-tag">— underwriter-controlled · nothing runs without your confirm</span>
+      </div>
+      <div class="actions-grid">
+        <div>
+          <p class="scope-title">1 · Scope — which lines to reprocess</p>
+          <div class="scope-list">
+            <label class="scope-item">
+              <input type="checkbox" class="scope-cb" value="Workers' Compensation">
+              <span class="lob-name">Workers' Compensation</span>
+              <span class="lob-flag pill sev-green"><span class="pill-dot"></span>OK</span>
+            </label>
+            <label class="scope-item">
+              <input type="checkbox" class="scope-cb" value="General Liability">
+              <span class="lob-name">General Liability</span>
+              <span class="lob-flag pill sev-green"><span class="pill-dot"></span>OK</span>
+            </label>
+            <label class="scope-item">
+              <input type="checkbox" class="scope-cb" value="Commercial Auto" checked>
+              <span class="lob-name">Commercial Auto</span>
+              <span class="lob-flag pill sev-amber"><span class="pill-dot"></span>New loss run + partial fleet</span>
+            </label>
+          </div>
+          <div class="premium-lock" title="Locked — reprocess won't overwrite">
+            <svg class="lk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <span class="pl-label">GL Proposed Bound Premium</span>
+            <span class="pl-val">$42,500 🔒</span>
+          </div>
+          <span class="pl-tip">Locked — reprocess will not overwrite a populated premium.</span>
+        </div>
+
+        <div>
+          <p class="files-title">2 · Files on this submission</p>
+          <div class="file-list" id="fileList">
+            <div class="file-row is-new">
+              <svg class="f-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+              <span class="f-name">Loss_Run_2021-2025.pdf</span>
+              <span class="new-chip">NEW</span>
+              <button class="unlink-btn">Unlink</button>
+            </div>
+            <div class="file-row"><svg class="f-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span class="f-name">ACORD_125_Application.pdf</span><button class="unlink-btn">Unlink</button></div>
+            <div class="file-row"><svg class="f-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span class="f-name">ACORD_130_WC.pdf</span><button class="unlink-btn">Unlink</button></div>
+            <div class="file-row"><svg class="f-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span class="f-name">ACORD_137.pdf</span><button class="unlink-btn">Unlink</button></div>
+            <div class="file-row"><svg class="f-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span class="f-name">Vehicle_Schedule.xlsx</span><button class="unlink-btn">Unlink</button></div>
+            <div class="file-row"><svg class="f-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span class="f-name">Property_SOV.pdf</span><button class="unlink-btn">Unlink</button></div>
+            <div class="file-row"><svg class="f-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span class="f-name">Broker_Cover_Email.msg</span><button class="unlink-btn">Unlink</button></div>
+          </div>
+          <p class="admin-note">Unlink is recoverable — the file is detached from reprocessing, not deleted. Permanent delete is admin-only.</p>
+        </div>
+      </div>
+
+      <div class="actions-cta">
+        <button class="btn btn-primary" id="reprocessBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+          Reprocess selected files
+        </button>
+        <span class="cta-note">Manual edits on unchecked lines are preserved · locked premium untouched.</span>
+      </div>
+    </div>
+
+  </div><!-- /cmp-card -->
+
+  <div class="note-card">
+    <h4>Concept 02 — Underwriter Brief</h4>
+    <div class="note-grid">
+      <div class="note-item"><div class="nl">Thesis</div><div class="nv">A standardized one-line-per-topic briefing that reads like a senior underwriter's file note — same structure every submission, deterministic, skimmable.</div></div>
+      <div class="note-item"><div class="nl">Target underwriter job</div><div class="nv">"Read the file the way I'd brief a colleague — what came in, what's solid, what's missing — without hunting fields."</div></div>
+      <div class="note-item"><div class="nl">Positioning</div><div class="nv">Standalone panel / tab pole. Prose surface, but the prose is templated — distinct from the tile-grid of Concept 01.</div></div>
+      <div class="note-item"><div class="nl">Why intuitive + LWC-feasibility</div><div class="nv">Prose is how underwriters actually think and hand off, but the fixed sentence skeleton kills the "reads different every time" risk Josh raised. Sentences are getter-composed strings from LDS field values (deterministic — <em>not</em> an LLM call in the primary path); rendered via <code>lightning-formatted-rich-text</code>. The one italic AI note is a single cached field, clearly labeled secondary. Reprocess fires the <code>Astrus_Submission_Update__e</code> platform event.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- confirm modal -->
+<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+      <h3 id="modalTitle">Confirm reprocess</h3>
+    </div>
+    <div class="modal-body">
+      <div id="modalScopeLine">Reprocess <span class="hl">Commercial Auto</span> using <span class="hl">1 new</span> + <span class="hl">6 existing</span> files?</div>
+      <ul>
+        <li>Manual edits on <span class="hl">Workers' Compensation</span> and <span class="hl">General Liability</span> are preserved.</li>
+        <li>Locked <span class="hl">GL Proposed Bound Premium ($42,500)</span> will not be overwritten.</li>
+        <li>Extraction re-runs only for the checked line(s).</li>
+      </ul>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-neutral" id="modalCancel">Cancel</button>
+      <button class="btn btn-primary" id="modalConfirm">Reprocess now</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+  <span id="toastMsg">Reprocess queued — Commercial Auto</span>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var current = prefersDark ? 'dark' : 'light';
+  function applyTheme(t) {
+    root.setAttribute('data-theme', t);
+    document.getElementById('themeText').textContent = (t === 'dark') ? 'Light' : 'Dark';
+  }
+  applyTheme(current);
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    current = (root.getAttribute('data-theme') === 'dark') ? 'light' : 'dark';
+    applyTheme(current);
+  });
+
+  var bellWrap = document.getElementById('bellWrap');
+  var bellBtn = document.getElementById('bellBtn');
+  bellBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = bellWrap.classList.toggle('open');
+    bellBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.addEventListener('click', function () { bellWrap.classList.remove('open'); bellBtn.setAttribute('aria-expanded','false'); });
+
+  /* deep-link chips scroll to the action zone */
+  document.querySelectorAll('.jump').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var z = document.getElementById('actionsZone');
+      z.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      z.classList.remove('scroll-flash'); void z.offsetWidth; z.classList.add('scroll-flash');
+    });
+  });
+
+  var overlay = document.getElementById('modalOverlay');
+  function checkedScopes() {
+    return Array.prototype.slice.call(document.querySelectorAll('.scope-cb:checked')).map(function (c) { return c.value; });
+  }
+  function linkedFileCount() { return document.querySelectorAll('.file-row:not(.unlinked)').length; }
+  function updateModalCounts() {
+    var scopes = checkedScopes();
+    var scopeText = scopes.length ? scopes.join(', ') : 'no lines selected';
+    var existing = Math.max(0, linkedFileCount() - 1);
+    document.getElementById('modalScopeLine').innerHTML =
+      'Reprocess <span class="hl">' + scopeText + '</span> using <span class="hl">1 new</span> + <span class="hl">' +
+      existing + ' existing</span> files?';
+  }
+  document.querySelectorAll('.scope-cb').forEach(function (c) { c.addEventListener('change', updateModalCounts); });
+  updateModalCounts();
+
+  document.getElementById('fileList').addEventListener('click', function (e) {
+    if (!e.target.classList.contains('unlink-btn')) return;
+    var row = e.target.closest('.file-row');
+    var un = row.classList.toggle('unlinked');
+    e.target.textContent = un ? 'Relink' : 'Unlink';
+    updateModalCounts();
+  });
+
+  var toast = document.getElementById('toast');
+  var toastTimer;
+  function flashToast(msg, warn) {
+    document.getElementById('toastMsg').textContent = msg;
+    toast.style.background = warn ? 'var(--warning)' : 'var(--success)';
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 3200);
+  }
+
+  function openModal() {
+    if (checkedScopes().length === 0) { flashToast('Select at least one line to reprocess', true); return; }
+    updateModalCounts();
+    overlay.classList.add('open');
+    document.getElementById('modalConfirm').focus();
+  }
+  function closeModal() { overlay.classList.remove('open'); }
+  document.getElementById('reprocessBtn').addEventListener('click', openModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+
+  document.getElementById('modalConfirm').addEventListener('click', function () {
+    closeModal();
+    var scopes = checkedScopes().join(', ');
+    document.querySelector('.pill-status').innerHTML =
+      '<span class="pill-dot" style="background:var(--warning)"></span>Reprocessing…';
+    flashToast('Reprocess queued — ' + scopes);
+    setTimeout(function () {
+      document.querySelector('.pill-status').innerHTML =
+        '<span class="pill-dot" style="background:var(--brand)"></span>Clearance Requested';
+      // Loss History block resolves deterministically
+      var blocks = document.querySelectorAll('.brief-block');
+      blocks.forEach(function (bl) {
+        var lbl = bl.querySelector('.block-label');
+        if (lbl && /Loss History/i.test(lbl.textContent)) {
+          bl.querySelector('.block-sentence').innerHTML =
+            'Loss run <span class="val">Loss_Run_2021-2025.pdf</span> is ingesting (2021–2025). Valuation date pending extraction. ' +
+            '<span class="pill sev-amber chip-inline"><span class="pill-dot"></span>Processing</span>';
+        }
+      });
+      flashToast('Commercial Auto reprocess complete — loss run captured');
+    }, 2600);
+  });
+})();
+</script>

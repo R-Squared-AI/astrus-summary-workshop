@@ -1,0 +1,696 @@
+<!--
+  CONCEPT 06 — "SPLIT LEDGER"  ("top-line-of-field-evidence" pole)
+  Astrus Underwriter-Controlled Reprocessing Solution Workshop
+  Canonical submission: A & B Painting, Inc. — SUB 022667
+
+  Direct answer to Rich's "the summary is so similar to field evidence — maybe combine"
+  and Josh's Option A ("a top-line summary row above each field-evidence section").
+  Extends the field-evidence shape: per-field VALUE | SOURCE & CONFIDENCE | inline edit | targeted reprocess.
+
+  ── LWC MAPPING (real component this mockup maps to 1:1) ─────────────────────
+  Container ................. lightning-card
+  Ledger grid ............... lightning-datatable with inline edit (or lightning-tree-grid for grouped rows).
+                              Columns: Field label | Extracted value (editable cell) | Confidence meter+source | Row action
+  Per-field confidence+source Field-evidence Apex @wire (the SAME data feeding the existing field-evidence UI)
+  Value cells (editable) .... datatable editable column; draft values captured via onsave; manual edits flagged
+  Confidence meter .......... inline CSS/SVG bar (green/amber/red bands from live Astrus thresholds)
+  Source doc chip ........... lightning-badge / -pill referencing ContentDocument name
+  Row / section reprocess ... lightning-button-icon per row → publishes Reprocess_Request__e platform event
+  Scope panel ............... lightning-checkbox-group (per-LOB) + file datatable (row actions: Unlink)
+  Confirm modal ............. lightning-modal (LWC modal API) — D2 no-silent-reprocess
+  Locked field D6 ........... read-only row + lock glyph; server rule blocks overwrite of Proposed_Bound_Premium__c
+  Manual-edit preservation .. D5 — edited cells kept unless their row is explicitly reprocessed
+  Data source ............... Apex field-evidence wire + LDS getRecord; no fetch/DML-in-loop (LWS safe)
+  ─────────────────────────────────────────────────────────────────────────────
+-->
+<style>
+  :root {
+    --brand:#0176d3; --brand-dark:#032d60;
+    --tint-1:#f3f8fe; --tint-2:#eaf2fc; --tint-3:#dbeafe;
+    --success:#2e7d32; --warning:#f57f17; --error:#b71c1c;
+    --neutral-text:#181818; --neutral-muted:#5c5c5c;
+    --border:#e5e5e5; --surface:#ffffff; --page-bg:#f3f3f3;
+    --success-bg:#eafaea; --warning-bg:#fff6e2; --error-bg:#fdeaea;
+    --meter-track:#eceff3;
+    --shadow:0 2px 4px rgba(0,0,0,.08);
+    --shadow-lg:0 4px 16px rgba(0,0,0,.16);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius:0.25rem;
+  }
+  :root[data-theme="dark"] {
+    --brand:#1b96ff; --brand-dark:#90caf9;
+    --tint-1:#22252a; --tint-2:#262b33; --tint-3:#2b3340;
+    --success:#4caf50; --warning:#ffb300; --error:#ef5350;
+    --neutral-text:#f3f3f3; --neutral-muted:#b0b0b0;
+    --border:#3a3a3a; --surface:#1b1b1b; --page-bg:#141414;
+    --success-bg:#1d2a1d; --warning-bg:#2e2716; --error-bg:#2e1a1a;
+    --meter-track:#333;
+    --shadow:0 2px 4px rgba(0,0,0,.4);
+    --shadow-lg:0 4px 16px rgba(0,0,0,.6);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --brand:#1b96ff; --brand-dark:#90caf9;
+      --tint-1:#22252a; --tint-2:#262b33; --tint-3:#2b3340;
+      --success:#4caf50; --warning:#ffb300; --error:#ef5350;
+      --neutral-text:#f3f3f3; --neutral-muted:#b0b0b0;
+      --border:#3a3a3a; --surface:#1b1b1b; --page-bg:#141414;
+      --success-bg:#1d2a1d; --warning-bg:#2e2716; --error-bg:#2e1a1a;
+      --meter-track:#333;
+      --shadow:0 2px 4px rgba(0,0,0,.4);
+      --shadow-lg:0 4px 16px rgba(0,0,0,.6);
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:var(--font); background:var(--page-bg); color:var(--neutral-text);
+    line-height:1.4; font-size:14px; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 1rem 3rem; }
+
+  /* chrome */
+  .lightning-header { background:var(--brand-dark); color:#fff; padding:0.4rem 1rem; font-size:0.75rem;
+    display:flex; align-items:center; gap:0.75rem; position:sticky; top:0; z-index:20; }
+  :root[data-theme="dark"] .lightning-header { background:#0b1929; }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .lightning-header{ background:#0b1929; } }
+  .app-dot { width:1.1rem; height:1.1rem; border-radius:3px; background:var(--brand);
+    display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .breadcrumb { display:flex; align-items:center; gap:0.4rem; color:#c9deff; flex-wrap:wrap; }
+  .breadcrumb b { color:#fff; font-weight:600; }
+  .breadcrumb .sep { opacity:.55; }
+  .spacer { flex:1 1 auto; }
+  .theme-toggle { background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.28);
+    border-radius:var(--radius); padding:0.3rem 0.6rem; font-size:0.72rem; cursor:pointer;
+    display:inline-flex; align-items:center; gap:0.35rem; font-family:var(--font); }
+  .theme-toggle:hover { background:rgba(255,255,255,.22); }
+  .theme-toggle:focus-visible { outline:2px solid #fff; outline-offset:1px; }
+
+  .subnav { background:var(--surface); border-bottom:1px solid var(--border); padding:0.35rem 1rem;
+    display:flex; gap:1rem; font-size:0.78rem; color:var(--neutral-muted); overflow-x:auto; }
+  .subnav .tab { padding:0.35rem 0.2rem; white-space:nowrap; }
+  .subnav .tab.active { color:var(--brand); border-bottom:2px solid var(--brand); font-weight:600; }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:var(--shadow); margin-top:1rem; }
+  .card-body { padding:1rem 1.25rem; }
+
+  /* header */
+  .summary-head { display:flex; align-items:flex-start; gap:1rem; flex-wrap:wrap;
+    padding:1rem 1.25rem; border-bottom:1px solid var(--border); }
+  .icon-tile { width:2.5rem; height:2.5rem; border-radius:var(--radius); background:var(--brand);
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .head-titles { flex:1 1 260px; min-width:200px; }
+  .eyebrow { font-size:0.72rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--neutral-muted); }
+  .card-title { font-size:1.375rem; font-weight:700; color:var(--brand-dark); margin:0.1rem 0 0.2rem; }
+  .head-meta { font-size:0.82rem; color:var(--neutral-muted); display:flex; gap:0.75rem; flex-wrap:wrap; }
+  .head-meta b { color:var(--neutral-text); font-weight:600; }
+  .pill-review { display:inline-flex; align-items:center; gap:0.3rem; font-size:0.72rem; font-weight:700;
+    background:var(--warning-bg); color:var(--warning); padding:0.2rem 0.6rem; border-radius:999px; }
+  .pill-review .dot { width:8px; height:8px; border-radius:50%; background:var(--warning); }
+
+  .head-right { display:flex; align-items:center; gap:1rem; }
+  .ring-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .ring-wrap .ring-label { font-size:0.66rem; color:var(--neutral-muted); font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+  .ring { position:relative; width:64px; height:64px; }
+  .ring .val { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.95rem; font-weight:700; color:var(--warning); }
+  .bell { position:relative; background:none; border:1px solid var(--border); border-radius:var(--radius);
+    width:2.1rem; height:2.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--neutral-muted); }
+  .bell:hover { background:var(--tint-1); }
+  .bell .count { position:absolute; top:-6px; right:-6px; background:var(--error); color:#fff; border-radius:999px;
+    font-size:0.65rem; font-weight:700; min-width:1.05rem; height:1.05rem; display:flex; align-items:center;
+    justify-content:center; padding:0 3px; border:2px solid var(--surface); }
+
+  /* legend */
+  .legend { display:flex; gap:1rem; flex-wrap:wrap; padding:0.6rem 1.25rem; border-bottom:1px solid var(--border);
+    font-size:0.74rem; color:var(--neutral-muted); align-items:center; background:var(--tint-1); }
+  .legend .lg { display:inline-flex; align-items:center; gap:0.35rem; }
+  .legend .bar-mini { width:26px; height:7px; border-radius:4px; }
+
+  /* ledger */
+  .ledger { padding:0.25rem 0 0.5rem; }
+  .group-label { font-size:1.125rem; font-weight:700; color:var(--brand-dark); background:var(--tint-3);
+    border-left:4px solid var(--brand); padding:0.5rem 1rem; margin:0.75rem 0 0; display:flex; align-items:center; gap:0.5rem; }
+  .group-label .g-ico { color:var(--brand); }
+  .group-label .g-count { font-size:0.72rem; font-weight:600; color:var(--neutral-muted); margin-left:auto; }
+
+  /* header row for the two-column ledger */
+  .ledger-colhead { display:grid; grid-template-columns:1.4fr 1.5fr 1.8fr auto; gap:0.5rem;
+    padding:0.4rem 1rem; font-size:0.68rem; text-transform:uppercase; letter-spacing:.04em; color:var(--neutral-muted);
+    border-bottom:1px solid var(--border); font-weight:700; }
+  .ledger-colhead .r-val, .ledger-colhead .r-src { }
+  .row { display:grid; grid-template-columns:1.4fr 1.5fr 1.8fr auto; gap:0.5rem; align-items:center;
+    padding:0.6rem 1rem; border-bottom:1px solid var(--border); }
+  .row:hover { background:var(--tint-1); }
+  .row.missing { background:color-mix(in srgb, var(--error) 6%, transparent); }
+  .row.locked { background:var(--tint-2); }
+  .r-field { font-weight:600; font-size:0.9rem; }
+  .r-field .fsub { display:block; font-size:0.72rem; color:var(--neutral-muted); font-weight:400; }
+
+  /* editable value cell */
+  .r-val { display:flex; align-items:center; gap:0.4rem; }
+  .val-edit { flex:1 1 auto; border:1px solid transparent; border-radius:var(--radius); padding:0.3rem 0.45rem;
+    font-family:var(--font); font-size:0.9rem; font-weight:700; background:transparent; color:var(--neutral-text);
+    font-variant-numeric:tabular-nums; min-width:0; }
+  .val-edit:hover { border-color:var(--border); background:var(--surface); }
+  .val-edit:focus { border-color:var(--brand); background:var(--surface); outline:none; box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 25%,transparent); }
+  .val-edit.empty { color:var(--neutral-muted); font-style:italic; font-weight:400; }
+  .pencil { color:var(--neutral-muted); flex:0 0 auto; opacity:.5; }
+  .row:hover .pencil { opacity:1; }
+  .edited-flag { font-size:0.62rem; font-weight:700; color:var(--brand); background:var(--tint-3);
+    padding:0.05rem 0.35rem; border-radius:999px; white-space:nowrap; }
+
+  /* source + confidence cell */
+  .r-src { display:flex; flex-direction:column; gap:0.3rem; }
+  .meter-line { display:flex; align-items:center; gap:0.5rem; }
+  .meter { flex:1 1 auto; height:8px; background:var(--meter-track); border-radius:999px; overflow:hidden; max-width:150px; }
+  .meter > span { display:block; height:100%; border-radius:999px; }
+  .meter.ok > span { background:var(--success); }
+  .meter.warn > span { background:var(--warning); }
+  .meter.err > span { background:var(--error); }
+  .conf-num { font-size:0.78rem; font-weight:700; font-variant-numeric:tabular-nums; min-width:2.6rem; }
+  .conf-num.ok { color:var(--success); }
+  .conf-num.warn { color:var(--warning); }
+  .conf-num.err { color:var(--error); }
+  .doc-chip { display:inline-flex; align-items:center; gap:0.3rem; font-size:0.72rem; color:var(--neutral-muted);
+    background:var(--tint-1); border:1px solid var(--border); border-radius:999px; padding:0.1rem 0.5rem; width:fit-content; max-width:100%; }
+  .doc-chip.none { color:var(--error); background:var(--error-bg); border-color:color-mix(in srgb,var(--error) 30%,transparent); }
+  .doc-chip .d-ico { flex:0 0 auto; }
+  .doc-chip .d-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* row action */
+  .r-act { display:flex; justify-content:flex-end; }
+  .row-reprocess { background:none; border:1px solid var(--border); border-radius:var(--radius);
+    color:var(--brand); font-size:0.74rem; font-weight:600; padding:0.3rem 0.55rem; cursor:pointer;
+    display:inline-flex; align-items:center; gap:0.3rem; white-space:nowrap; font-family:var(--font); }
+  .row-reprocess:hover { background:var(--tint-1); }
+  .row-reprocess.prominent { background:var(--error); border-color:var(--error); color:#fff; }
+  .row-reprocess.prominent:hover { background:#9a1414; }
+  .row-reprocess:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+  .row-reprocess[disabled]{ opacity:.55; cursor:not-allowed; }
+  .lock-glyph { color:var(--neutral-muted); font-size:0.95rem; }
+  .tip { position:relative; cursor:help; }
+  .tip .tip-box { visibility:hidden; opacity:0; position:absolute; bottom:130%; right:0; width:220px;
+    background:var(--brand-dark); color:#fff; font-size:0.72rem; font-weight:400; padding:0.5rem 0.6rem;
+    border-radius:var(--radius); box-shadow:var(--shadow-lg); z-index:30; transition:opacity .15s; text-align:left; }
+  :root[data-theme="dark"] .tip .tip-box { background:#0b1929; color:#f3f3f3; }
+  .tip:hover .tip-box, .tip:focus .tip-box { visibility:visible; opacity:1; }
+  .chip { display:inline-flex; align-items:center; gap:0.3rem; font-size:0.7rem; font-weight:600; padding:0.1rem 0.45rem; border-radius:999px; }
+  .chip .dot { width:7px; height:7px; border-radius:50%; }
+  .chip.warn { background:var(--warning-bg); color:var(--warning); } .chip.warn .dot{ background:var(--warning); }
+  .chip.ok { background:var(--success-bg); color:var(--success); } .chip.ok .dot{ background:var(--success); }
+  .chip.err { background:var(--error-bg); color:var(--error); } .chip.err .dot{ background:var(--error); }
+
+  /* footer scope zone (lower emphasis) */
+  .action-zone { margin:1rem 1.25rem 1.25rem; border:1px dashed var(--border); border-radius:var(--radius);
+    background:var(--tint-1); }
+  .action-zone summary { list-style:none; cursor:pointer; padding:0.75rem 1rem; display:flex; align-items:center; gap:0.5rem;
+    font-weight:700; color:var(--brand-dark); font-size:0.95rem; }
+  .action-zone summary::-webkit-details-marker { display:none; }
+  .action-zone summary .chev { margin-left:auto; transition:transform .18s; color:var(--neutral-muted); }
+  .action-zone[open] summary .chev { transform:rotate(180deg); }
+  .action-zone .az-body { padding:0 1rem 1rem; }
+  .az-body h4 { font-size:0.8rem; text-transform:uppercase; letter-spacing:.03em; color:var(--neutral-muted); margin:0.6rem 0 0.4rem; }
+  .lob-check { display:flex; align-items:center; gap:0.5rem; padding:0.35rem 0.5rem; border-radius:var(--radius); }
+  .lob-check:hover { background:var(--tint-2); }
+  .lob-check input { width:1rem; height:1rem; accent-color:var(--brand); }
+  .lob-check label { font-size:0.88rem; cursor:pointer; }
+  .lob-check .lob-hint { font-size:0.72rem; color:var(--neutral-muted); margin-left:auto; }
+  .file-row { display:flex; align-items:center; gap:0.6rem; padding:0.45rem 0.5rem; border:1px solid var(--border);
+    border-radius:var(--radius); margin-bottom:0.4rem; }
+  .file-row .fname { flex:1 1 auto; font-size:0.85rem; word-break:break-all; }
+  .file-ico { color:var(--neutral-muted); flex:0 0 auto; }
+  .new-badge { background:var(--success); color:#fff; font-size:0.62rem; font-weight:700; text-transform:uppercase;
+    padding:0.1rem 0.4rem; border-radius:999px; letter-spacing:.03em; }
+  .unlink { background:none; border:none; color:var(--brand); font-size:0.76rem; cursor:pointer; font-weight:600; }
+  .unlink:hover { text-decoration:underline; }
+  .divider { height:1px; background:var(--border); margin:0.8rem 0; }
+  .az-actions { display:flex; justify-content:flex-end; gap:0.6rem; margin-top:0.8rem; }
+
+  .btn { font-family:var(--font); font-size:0.82rem; font-weight:600; border-radius:var(--radius);
+    padding:0.45rem 0.9rem; cursor:pointer; border:1px solid var(--border); background:var(--surface);
+    color:var(--brand); display:inline-flex; align-items:center; gap:0.4rem; }
+  .btn:hover { background:var(--tint-1); }
+  .btn.brand { background:var(--brand); border-color:var(--brand); color:#fff; }
+  .btn.brand:hover { background:#015fac; }
+  .btn.subtle { color:var(--neutral-muted); }
+  .btn:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+
+  /* modal */
+  .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center;
+    justify-content:center; z-index:50; padding:1rem; }
+  .modal-backdrop.show { display:flex; }
+  .modal { background:var(--surface); border-radius:0.5rem; box-shadow:var(--shadow-lg); max-width:480px; width:100%; overflow:hidden; }
+  .modal-head { padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:0.6rem; }
+  .modal-head h3 { margin:0; font-size:1.15rem; font-weight:700; color:var(--brand-dark); }
+  .modal-body { padding:1.1rem 1.25rem; font-size:0.9rem; }
+  .modal-body ul { margin:0.6rem 0 0; padding-left:1.1rem; }
+  .modal-body li { margin:0.3rem 0; }
+  .modal-foot { padding:0.85rem 1.25rem; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:0.6rem; }
+  .decision-tag { font-size:0.68rem; font-weight:700; color:var(--brand); background:var(--tint-3); border-radius:3px; padding:0.05rem 0.3rem; }
+
+  .toast { position:fixed; bottom:1.25rem; left:50%; transform:translateX(-50%) translateY(120%);
+    background:var(--brand-dark); color:#fff; padding:0.8rem 1.2rem; border-radius:var(--radius);
+    box-shadow:var(--shadow-lg); font-size:0.85rem; z-index:60; transition:transform .35s cubic-bezier(.2,.8,.2,1);
+    display:flex; align-items:center; gap:0.6rem; max-width:90vw; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  :root[data-theme="dark"] .toast { background:#0b1929; }
+  .spin { animation:spin 0.9s linear infinite; display:inline-block; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* footer note */
+  .note-card { background:var(--tint-1); border:1px solid var(--border); }
+  .note-card .card-body { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:1rem 1.5rem; }
+  .note-block h4 { margin:0 0 0.3rem; font-size:0.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--brand); }
+  .note-block p { margin:0; font-size:0.85rem; color:var(--neutral-text); }
+  .note-block.full { grid-column:1/-1; }
+  code { font-size:0.82em; background:var(--tint-2); padding:0.05rem 0.3rem; border-radius:3px; }
+
+  @media (max-width:720px){
+    .ledger-colhead { display:none; }
+    .row { grid-template-columns:1fr; gap:0.4rem; padding:0.75rem 1rem; }
+    .r-act { justify-content:flex-start; }
+    .meter { max-width:none; }
+  }
+  .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+</style>
+
+<div class="lightning-header">
+  <span class="app-dot" aria-hidden="true">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 2l3 6 6 .9-4.5 4.3 1.1 6L12 16.8 6.4 19.2l1.1-6L3 8.9 9 8z"/></svg>
+  </span>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <span>Astrus Submission</span><span class="sep">›</span><b>SUB 022667</b>
+  </nav>
+  <span class="spacer"></span>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle light or dark theme">
+    <span id="themeIcon">🌙</span><span id="themeText">Dark</span>
+  </button>
+</div>
+
+<nav class="subnav" aria-label="Record tabs">
+  <span class="tab active">Field Evidence</span>
+  <span class="tab">Summary</span>
+  <span class="tab">Details</span>
+  <span class="tab">Related</span>
+  <span class="tab">Documents</span>
+</nav>
+
+<div class="wrap">
+  <div class="card" role="region" aria-label="At-a-glance submission summary — split ledger">
+
+    <!-- header -->
+    <div class="summary-head">
+      <span class="icon-tile" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M4 4h16v3H4zM4 9h9v2H4zm0 4h9v2H4zm0 4h6v2H4zm11-4l5 5-1.4 1.4L15 16.8z"/></svg>
+      </span>
+      <div class="head-titles">
+        <div class="eyebrow">Submission summary · value vs. source ledger</div>
+        <h1 class="card-title">A &amp; B Painting, Inc.</h1>
+        <div class="head-meta">
+          <span><b>SUB 022667</b></span>
+          <span>New Business</span>
+          <span>Broker <b>R2 Solutions</b></span>
+          <span class="pill-review"><span class="dot"></span>Requires review</span>
+        </div>
+      </div>
+      <div class="head-right">
+        <div class="ring-wrap">
+          <div class="ring" role="img" aria-label="Overall extraction confidence 73.5 percent, amber band">
+            <svg width="64" height="64" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="27" fill="none" stroke="var(--border)" stroke-width="7"/>
+              <circle cx="32" cy="32" r="27" fill="none" stroke="var(--warning)" stroke-width="7"
+                stroke-linecap="round" stroke-dasharray="169.6" stroke-dashoffset="44.9" transform="rotate(-90 32 32)"/>
+            </svg>
+            <span class="val">73.5%</span>
+          </div>
+          <span class="ring-label">Confidence</span>
+        </div>
+        <button class="bell" id="bellBtn" aria-label="1 new notification: a file just arrived">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 00-6 6v3.6L4 15v1h16v-1l-2-3.4V8a6 6 0 00-6-6zm0 20a2.5 2.5 0 002.45-2h-4.9A2.5 2.5 0 0012 22z"/></svg>
+          <span class="count" id="bellCount">1</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- legend -->
+    <div class="legend" aria-hidden="false">
+      <span style="font-weight:700;color:var(--neutral-muted);">Confidence bands:</span>
+      <span class="lg"><span class="bar-mini" style="background:var(--success)"></span> ≥ 90 High</span>
+      <span class="lg"><span class="bar-mini" style="background:var(--warning)"></span> 70–89 Review</span>
+      <span class="lg"><span class="bar-mini" style="background:var(--error)"></span> &lt; 70 Low / Missing</span>
+      <span class="lg" style="margin-left:auto;">✏️ value cells are editable — manual edits are preserved on reprocess (D5)</span>
+    </div>
+
+    <!-- column header -->
+    <div class="ledger-colhead">
+      <span>Field</span>
+      <span class="r-val">Extracted value</span>
+      <span class="r-src">Source &amp; confidence</span>
+      <span class="r-act" style="text-align:right;">Action</span>
+    </div>
+
+    <!-- LEDGER -->
+    <div class="ledger" id="ledger"><!-- rows injected --></div>
+
+    <!-- ACTION ZONE (lower emphasis, D2/D4/D5/D6) -->
+    <details class="action-zone" id="actionZone">
+      <summary>
+        <span aria-hidden="true">⟳</span> Reprocess scope &amp; files
+        <span class="chev" aria-hidden="true">▾</span>
+      </summary>
+      <div class="az-body">
+        <p style="font-size:0.82rem;color:var(--neutral-muted);margin:0.5rem 0 0;">
+          Pick which lines of business to re-run and which files to include. A new file just arrived that answers the missing loss run.
+        </p>
+        <h4>Lines of business</h4>
+        <div class="lob-check"><input type="checkbox" id="lob-wc"><label for="lob-wc">Workers' Compensation</label><span class="lob-hint">payroll captured</span></div>
+        <div class="lob-check"><input type="checkbox" id="lob-gl"><label for="lob-gl">General Liability</label><span class="lob-hint">revenue captured</span></div>
+        <div class="lob-check"><input type="checkbox" id="lob-ca" checked><label for="lob-ca">Commercial Auto</label><span class="lob-hint">affected by new loss run + partial fleet</span></div>
+
+        <div class="divider"></div>
+        <h4>Files</h4>
+        <div id="scopeFiles"></div>
+
+        <div class="divider"></div>
+        <div class="az-actions">
+          <button class="btn subtle" id="resetEditsBtn">Discard my edits</button>
+          <button class="btn brand" id="reprocessScopeBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6a6 6 0 11-6 6H4a8 8 0 108-8z"/></svg>
+            Reprocess selected files
+          </button>
+        </div>
+      </div>
+    </details>
+
+  </div><!-- /component -->
+
+  <!-- FOOTER NOTE -->
+  <div class="card note-card">
+    <div class="card-body">
+      <div class="note-block full">
+        <h4>Concept 06 — Split Ledger</h4>
+        <p style="font-weight:600;font-size:0.95rem;">A two-column ledger — extracted VALUE on the left, SOURCE &amp; CONFIDENCE on the right — edit or reprocess any line where the confidence is weak.</p>
+      </div>
+      <div class="note-block">
+        <h4>Target underwriter job</h4>
+        <p>"Trust but verify each captured value — see confidence/source per field and fix the weak ones without leaving the summary."</p>
+      </div>
+      <div class="note-block">
+        <h4>Tab vs. panel</h4>
+        <p>"Top-line-of-field-evidence" pole — directly answers Rich's "combine with field evidence" and Josh's Option A (a summary row above each field-evidence section). Smallest conceptual leap from the UI they already have.</p>
+      </div>
+      <div class="note-block">
+        <h4>Why intuitive</h4>
+        <p>Mirrors how underwriters actually audit an extraction: value ↔ source ↔ confidence, side by side. Weak rows draw the eye; the fix (edit or targeted reprocess) is right there on the row.</p>
+      </div>
+      <div class="note-block full">
+        <h4>LWC feasibility</h4>
+        <p><code>lightning-datatable</code> inline-edit is native (or <code>lightning-tree-grid</code> for grouped rows); per-field confidence + source come from the SAME field-evidence Apex <code>@wire</code> that powers the existing UI; per-row reprocess publishes a <code>Reprocess_Request__e</code> platform event; the locked Proposed Bound Premium is enforced client- and server-side (<code>D6</code>). Everything is base components + inline SVG/CSS — LWS-safe, no third-party JS.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- confirm modal -->
+<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal-head"><span aria-hidden="true">⟳</span><h3 id="modalTitle">Confirm reprocess</h3></div>
+    <div class="modal-body">
+      <p id="confirmLead">Re-run extraction for <b id="confirmScope">Commercial Auto</b> using the selected files, including the newly arrived <b>Loss_Run_2021-2025.pdf</b>?</p>
+      <ul>
+        <li><span class="decision-tag">D2</span> No silent reprocess — this confirm step is required.</li>
+        <li><span class="decision-tag">D5</span> Your manual edits on other rows are preserved.</li>
+        <li><span class="decision-tag">D6</span> GL Proposed Bound Premium ($42,500) is locked and will not be overwritten.</li>
+      </ul>
+    </div>
+    <div class="modal-foot">
+      <button class="btn subtle" id="cancelConfirm">Cancel</button>
+      <button class="btn brand" id="confirmReprocess">Reprocess now</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span class="t-ico" aria-hidden="true">✓</span><span id="toastMsg">Reprocess complete</span>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var root = document.documentElement;
+
+  /* theme */
+  var tBtn=document.getElementById('themeToggle'), tIcon=document.getElementById('themeIcon'), tText=document.getElementById('themeText');
+  function prefersDark(){ return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
+  function applyThemeUI(){
+    var dark = root.getAttribute('data-theme')==='dark' || (!root.getAttribute('data-theme') && prefersDark());
+    tIcon.textContent = dark?'☀️':'🌙'; tText.textContent = dark?'Light':'Dark';
+  }
+  tBtn.addEventListener('click', function(){
+    var cur=root.getAttribute('data-theme'); if(!cur){ cur=prefersDark()?'dark':'light'; }
+    root.setAttribute('data-theme', cur==='dark'?'light':'dark'); applyThemeUI();
+  });
+  applyThemeUI();
+
+  /* ── ledger model ── */
+  function band(conf){ if(conf===null) return 'err'; if(conf>=90) return 'ok'; if(conf>=70) return 'warn'; return 'err'; }
+  var groups = [
+    { key:'identity', label:'Identity', ico:'person', rows:[
+      { id:'ni', field:'Named Insured (primary)', value:'A & B Painting, Inc.', conf:96, src:'ACORD_125_Application.pdf', editable:true },
+      { id:'nis', field:'Named insureds', sub:'count', value:'3', conf:74, src:'ACORD_125_Application.pdf', editable:true, note:'unverified' },
+      { id:'nr', field:'New / Renewal', value:'New', conf:98, src:'Broker_Cover_Email.msg', editable:true }
+    ]},
+    { key:'coverage', label:'Coverage (lines of business)', ico:'shield', rows:[
+      { id:'wc', field:"Workers' Compensation", value:'Received', conf:95, src:'ACORD_130_WC.pdf', editable:false, kind:'lob' },
+      { id:'gl', field:'General Liability', value:'Received', conf:95, src:'ACORD_125_Application.pdf', editable:false, kind:'lob' },
+      { id:'ca', field:'Commercial Auto', sub:'2 quote lines', value:'Received', conf:91, src:'ACORD_137.pdf', editable:false, kind:'lob' }
+    ]},
+    { key:'exposures', label:'Exposures', ico:'chart', rows:[
+      { id:'wcpay', field:'WC Projected Payroll', value:'$4,928,350', conf:93, src:'ACORD_130_WC.pdf', editable:true, numeric:true },
+      { id:'glrev', field:'GL Projected Revenue', value:'$8,500,000', conf:92, src:'ACORD_125_Application.pdf', editable:true, numeric:true },
+      { id:'veh', field:'Vehicle / Power-Unit schedule', value:'Partial', conf:71, src:'Vehicle_Schedule.xlsx', editable:false, reprocess:true, lob:'Commercial Auto', note:'fleet history incomplete' }
+    ]},
+    { key:'loss', label:'Loss history', ico:'bolt', rows:[
+      { id:'loss', field:'Loss Run', sub:'valuation date', value:'', conf:null, src:'none', editable:false, reprocess:'prominent', lob:'Commercial Auto', missing:true }
+    ]},
+    { key:'dates', label:'Dates & broker', ico:'briefcase', rows:[
+      { id:'eff', field:'Effective / Expiration', value:'07/01/26 – 07/01/27', conf:97, src:'ACORD_125_Application.pdf', editable:true },
+      { id:'brk', field:'Submitting broker', value:'R2 Solutions', conf:94, src:'Broker_Cover_Email.msg', editable:true }
+    ]},
+    { key:'locked', label:'Locked', ico:'lock', rows:[
+      { id:'prem', field:'GL Proposed Bound Premium', value:'$42,500', conf:100, src:'Underwriter entry', editable:false, locked:true }
+    ]}
+  ];
+
+  var files = [
+    { name:'ACORD_125_Application.pdf' }, { name:'ACORD_130_WC.pdf' }, { name:'ACORD_137.pdf' },
+    { name:'Vehicle_Schedule.xlsx' }, { name:'Property_SOV.pdf' }, { name:'Broker_Cover_Email.msg' },
+    { name:'Loss_Run_2021-2025.pdf', isNew:true }
+  ];
+
+  var groupIco = {
+    person:'<path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.5-4-6-9-6z"/>',
+    shield:'<path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/>',
+    chart:'<path d="M4 20V10h4v10zm6 0V4h4v16zm6 0v-7h4v7z"/>',
+    bolt:'<path d="M13 2L4 14h6l-1 8 9-12h-6z"/>',
+    briefcase:'<path d="M9 4h6v2h5v14H4V6h5zm2 0v2h2V4z"/>',
+    lock:'<path d="M6 10V8a6 6 0 1112 0v2h1v11H5V10zm2 0h8V8a4 4 0 10-8 0z"/>'
+  };
+  function docIco(){ return '<svg class="d-ico" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h8l4 4v16H6zm8 1.5V6h2.5z"/></svg>'; }
+
+  /* ── render ── */
+  var edited = {}; // id -> true when user edits
+  function confPct(conf){ return conf===null ? 0 : conf; }
+
+  function rowHTML(r){
+    var b = band(r.conf);
+    var cls = 'row' + (r.missing?' missing':'') + (r.locked?' locked':'');
+    // value cell
+    var valInner;
+    if(r.locked){
+      valInner = '<span class="val-edit" style="font-weight:700;">'+r.value+'</span>' +
+                 '<span class="lock-glyph tip" tabindex="0" aria-label="Locked field">🔒' +
+                 '<span class="tip-box">Locked — reprocess &amp; edit won\'t overwrite a populated Proposed Bound Premium (D6).</span></span>';
+    } else if(r.editable){
+      var empty = r.value==='' ? ' empty' : '';
+      var display = r.value==='' ? 'Empty — add value' : r.value;
+      valInner = '<span class="val-edit'+empty+'" contenteditable="true" role="textbox" data-id="'+r.id+'" '+
+                 'aria-label="Edit '+r.field+'">'+display+'</span>' +
+                 '<span class="pencil" aria-hidden="true">✏️</span>' +
+                 '<span class="edited-flag" data-flag="'+r.id+'" style="display:none;">Edited</span>';
+    } else if(r.missing){
+      valInner = '<span class="val-edit empty">Empty — no value</span>';
+    } else {
+      // lob / partial value
+      var chipCls = r.value==='Received' ? 'ok' : (r.value==='Partial' ? 'warn' : 'err');
+      valInner = '<span class="chip '+chipCls+'"><span class="dot"></span>'+r.value+'</span>';
+    }
+
+    // source & confidence cell
+    var srcCell;
+    if(r.conf===null){
+      srcCell = '<div class="meter-line"><span class="conf-num err">—</span>' +
+                '<span class="chip err"><span class="dot"></span>Missing</span></div>' +
+                '<span class="doc-chip none">'+docIco()+'<span class="d-name">no source document</span></span>';
+    } else {
+      srcCell = '<div class="meter-line">' +
+                '<div class="meter '+b+'" role="img" aria-label="Confidence '+r.conf+' percent"><span style="width:'+confPct(r.conf)+'%"></span></div>' +
+                '<span class="conf-num '+b+'">'+r.conf+'%</span></div>' +
+                '<span class="doc-chip">'+docIco()+'<span class="d-name">'+r.src+'</span></span>';
+      if(r.note){ srcCell += ' <span class="chip warn" style="margin-top:2px;"><span class="dot"></span>'+r.note+'</span>'; }
+    }
+
+    // action cell
+    var actCell = '';
+    if(r.locked){
+      actCell = '<span style="font-size:0.72rem;color:var(--neutral-muted);">Read-only</span>';
+    } else if(r.reprocess==='prominent'){
+      actCell = '<button class="row-reprocess prominent" data-reprocess="'+r.id+'" data-lob="'+(r.lob||'')+'">'+
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6a6 6 0 11-6 6H4a8 8 0 108-8z"/></svg> Reprocess with new file</button>';
+    } else if(r.reprocess){
+      actCell = '<button class="row-reprocess" data-reprocess="'+r.id+'" data-lob="'+(r.lob||'')+'">'+
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6a6 6 0 11-6 6H4a8 8 0 108-8z"/></svg> Reprocess</button>';
+    } else {
+      actCell = '<span style="font-size:0.72rem;color:var(--neutral-muted);">—</span>';
+    }
+
+    return '<div class="'+cls+'" data-row="'+r.id+'">' +
+      '<div class="r-field">'+r.field+ (r.sub?'<span class="fsub">'+r.sub+'</span>':'') +'</div>' +
+      '<div class="r-val">'+valInner+'</div>' +
+      '<div class="r-src">'+srcCell+'</div>' +
+      '<div class="r-act">'+actCell+'</div>' +
+    '</div>';
+  }
+
+  function render(){
+    var host = document.getElementById('ledger');
+    var html = '';
+    groups.forEach(function(g){
+      html += '<div class="group-label"><svg class="g-ico" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">'+groupIco[g.ico]+'</svg>'+g.label+
+              '<span class="g-count">'+g.rows.length+(g.rows.length===1?' field':' fields')+'</span></div>';
+      g.rows.forEach(function(r){ html += rowHTML(r); });
+    });
+    host.innerHTML = html;
+    wireEditing();
+    wireRowReprocess();
+  }
+
+  function wireEditing(){
+    document.querySelectorAll('.val-edit[contenteditable]').forEach(function(el){
+      el.addEventListener('focus', function(){ if(el.classList.contains('empty')){ el.textContent=''; el.classList.remove('empty'); } });
+      el.addEventListener('input', function(){
+        var id = el.getAttribute('data-id');
+        edited[id] = true;
+        var flag = document.querySelector('[data-flag="'+id+'"]');
+        if(flag) flag.style.display='inline-block';
+      });
+      el.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); el.blur(); } });
+      el.addEventListener('blur', function(){
+        var id=el.getAttribute('data-id');
+        // persist to model
+        groups.forEach(function(g){ g.rows.forEach(function(r){ if(r.id===id){ r.value = el.textContent.trim(); } }); });
+        if(el.textContent.trim()===''){ el.classList.add('empty'); el.textContent='Empty — add value'; }
+      });
+    });
+  }
+
+  /* ── reprocess (row-level + scope) ── */
+  var pendingScope = null; // {labels:[], rowId, fromRow:bool}
+  var backdrop = document.getElementById('modalBackdrop');
+
+  function wireRowReprocess(){
+    document.querySelectorAll('[data-reprocess]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var rowId = btn.getAttribute('data-reprocess');
+        var lob = btn.getAttribute('data-lob') || 'Commercial Auto';
+        pendingScope = { labels:[lob], rowId:rowId, fromRow:true };
+        document.getElementById('confirmScope').textContent = lob;
+        backdrop.classList.add('show');
+        document.getElementById('confirmReprocess').focus();
+      });
+    });
+  }
+
+  document.getElementById('reprocessScopeBtn').addEventListener('click', function(){
+    var labels=[];
+    if(document.getElementById('lob-wc').checked) labels.push("Workers' Compensation");
+    if(document.getElementById('lob-gl').checked) labels.push('General Liability');
+    if(document.getElementById('lob-ca').checked) labels.push('Commercial Auto');
+    if(labels.length===0){ showToast('Select at least one line of business.', true); return; }
+    pendingScope = { labels:labels, rowId:null, fromRow:false };
+    document.getElementById('confirmScope').textContent = labels.join(', ');
+    backdrop.classList.add('show');
+    document.getElementById('confirmReprocess').focus();
+  });
+
+  document.getElementById('cancelConfirm').addEventListener('click', function(){ backdrop.classList.remove('show'); });
+  backdrop.addEventListener('click', function(e){ if(e.target===backdrop) backdrop.classList.remove('show'); });
+
+  document.getElementById('confirmReprocess').addEventListener('click', function(){
+    backdrop.classList.remove('show');
+    var btn = pendingScope && pendingScope.rowId ? document.querySelector('[data-reprocess="'+pendingScope.rowId+'"]') : document.getElementById('reprocessScopeBtn');
+    var orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin">⟳</span> Reprocessing…';
+    showToast('Reprocess started for '+(pendingScope?pendingScope.labels.join(', '):'')+' — using the new loss run.', false);
+    setTimeout(function(){ finishReprocess(); btn.disabled=false; }, 2000);
+  });
+
+  function finishReprocess(){
+    // STATE CHANGE — loss run row now populated + high confidence; vehicle row improves.
+    groups.forEach(function(g){ g.rows.forEach(function(r){
+      if(r.id==='loss'){ r.value='5-yr history, valued 06/2025'; r.conf=94; r.src='Loss_Run_2021-2025.pdf'; r.missing=false; r.reprocess='row'; delete r.note; }
+      if(r.id==='veh'){ r.value='Complete'; r.conf=93; delete r.note; r.reprocess='row'; }
+    }); });
+    // NOTE: edited rows are NOT touched (D5). Locked premium untouched (D6).
+    render();
+    document.getElementById('bellCount').style.display='none';
+    var editedCount = Object.keys(edited).length;
+    var msg = 'Reprocess complete — loss run captured (94%), fleet schedule now complete. GL premium ($42,500) untouched.';
+    if(editedCount>0){ msg += ' Your '+editedCount+' manual edit'+(editedCount>1?'s':'')+' preserved (D5).'; }
+    showToast(msg, false);
+  }
+
+  document.getElementById('resetEditsBtn').addEventListener('click', function(){
+    edited={};
+    showToast('Manual edits discarded — values reverted to extracted.', false);
+    // simplest: re-render from a fresh copy is overkill for the mock; just clear flags
+    document.querySelectorAll('[data-flag]').forEach(function(f){ f.style.display='none'; });
+  });
+
+  /* bell opens the action zone (shows the new file) */
+  document.getElementById('bellBtn').addEventListener('click', function(){
+    var az=document.getElementById('actionZone'); az.open=true; az.scrollIntoView({behavior:'smooth',block:'center'});
+  });
+
+  /* scope files */
+  function renderScopeFiles(){
+    var host=document.getElementById('scopeFiles');
+    var ico='<svg class="file-ico" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h8l4 4v16H6zm8 1.5V6h2.5z"/></svg>';
+    host.innerHTML = files.map(function(f){
+      return '<div class="file-row">'+ico+'<span class="fname">'+f.name+(f.isNew?' <span class="new-badge">New</span>':'')+'</span>'+
+             '<button class="unlink" data-unlink="'+f.name+'">Unlink</button></div>';
+    }).join('');
+    host.querySelectorAll('[data-unlink]').forEach(function(b){
+      b.addEventListener('click', function(){
+        files=files.filter(function(f){ return f.name!==b.getAttribute('data-unlink'); });
+        renderScopeFiles();
+        showToast('File unlinked (recoverable — admins can permanently delete). D4', false);
+      });
+    });
+  }
+  renderScopeFiles();
+
+  /* toast */
+  var toast=document.getElementById('toast'), toastTimer;
+  function showToast(msg,isError){
+    document.getElementById('toastMsg').textContent=msg;
+    toast.querySelector('.t-ico').textContent=isError?'⚠️':'✓';
+    toast.querySelector('.t-ico').style.color=isError?'var(--warning)':'var(--success)';
+    toast.classList.add('show'); clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){ toast.classList.remove('show'); }, 4600);
+  }
+
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ backdrop.classList.remove('show'); } });
+
+  render();
+})();
+</script>
