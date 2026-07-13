@@ -5,309 +5,86 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Astrus Submission Summary — Design Round 3</title>
 <style>
-  /* LIGHT MODE ONLY. No dark styling of any kind; no theme switching (Golden Standard G6). */
+  /* LIGHT MODE ONLY. No dark styling; no theme switching. */
   :root {
-    --brand:      #0176d3;
-    --brand-dark: #032d60;
-    --ink:        #181818;
-    --text-2:     #514f4d;
-    --muted:      #706e6b;
-    --border:     #e5e5e5;
-    --surface:    #ffffff;
-    --recess:     #fafaf9;
-    --page-bg:    #f3f3f3;
-    --blue-tint:  #e8f4fd;
-    --blue-tint-bd:#c9e5f9;
-    --produced:   #2e7d32;  --produced-bg:#edf7ed;
-    --partial:    #a86403;  --partial-bg: #fff8e1;
-    --notprod:    #ba0517;  --notprod-bg: #fef0f0;  --notprod-bd:#f5c0c0;
-    --na:         #706e6b;  --na-bg:      #f3f3f3;
-    --shadow:     0 1px 3px rgba(0,0,0,0.08);
-    --shadow-lg:  0 8px 24px rgba(3,45,96,0.14);
-    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --brand:#0176d3; --brand-dark:#032d60;
+    --ink:#181818; --text-2:#514f4d; --muted:#706e6b;
+    --border:#e5e5e5; --surface:#ffffff; --recess:#fafaf9; --page-bg:#f3f3f3;
+    --blue-tint:#e8f4fd; --blue-tint-bd:#c9e5f9;
+    --ok:#2e7d32; --ok-bg:#edf7ed; --warn:#a86403; --warn-bg:#fff8e1;
+    --miss:#ba0517; --miss-bg:#fef0f0; --miss-bd:#f5c0c0;
+    --shadow:0 1px 3px rgba(0,0,0,0.08); --shadow-lg:0 8px 24px rgba(3,45,96,0.14);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
+  * { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; font-family:var(--font); color:var(--ink); background:var(--page-bg); line-height:1.5; font-size:16px; -webkit-font-smoothing:antialiased; }
 
-  * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    font-family: var(--font);
-    color: var(--ink);
-    background: var(--page-bg);
-    line-height: 1.5;
-    font-size: 16px;
-    -webkit-font-smoothing: antialiased;
-  }
+  .breadcrumb { background:var(--brand-dark); color:#fff; font-size:0.8125rem; font-weight:600; padding:0.5rem 1.5rem; display:flex; align-items:center; gap:.5rem; }
+  .breadcrumb .sep { opacity:.55; } .breadcrumb .home { opacity:.85; }
 
-  /* ---- Faux Lightning breadcrumb chrome ---- */
-  .breadcrumb {
-    background: var(--brand-dark);
-    color: #fff;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    padding: 0.5rem 1.5rem;
-    letter-spacing: .01em;
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-  }
-  .breadcrumb .sep  { opacity: .55; }
-  .breadcrumb .home { opacity: .85; }
+  header.hero { background:linear-gradient(135deg,var(--brand-dark) 0%,#0b3d78 55%,var(--brand) 145%); color:#fff; padding:3rem 1.5rem 2.75rem; position:relative; overflow:hidden; }
+  header.hero::after { content:""; position:absolute; right:-80px; top:-90px; width:340px; height:340px; background:radial-gradient(circle,rgba(255,255,255,.10),transparent 70%); pointer-events:none; }
+  .hero-inner { max-width:1200px; margin:0 auto; position:relative; z-index:1; }
+  .eyebrow { display:inline-block; font-size:0.75rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.28); padding:.3rem .7rem; border-radius:1rem; margin-bottom:1.15rem; }
+  header.hero h1 { margin:0 0 .8rem; font-size:clamp(1.9rem,3.8vw,2.9rem); font-weight:700; line-height:1.1; letter-spacing:-0.02em; max-width:20ch; }
+  header.hero p.lede { margin:0; font-size:clamp(1rem,1.4vw,1.15rem); max-width:80ch; color:rgba(255,255,255,.93); }
 
-  /* ---- Header ---- */
-  header.hero {
-    background: linear-gradient(135deg, var(--brand-dark) 0%, #0b3d78 55%, var(--brand) 145%);
-    color: #fff;
-    padding: 3rem 1.5rem 2.75rem;
-    position: relative;
-    overflow: hidden;
-  }
-  header.hero::after {
-    content: "";
-    position: absolute;
-    right: -80px; top: -90px;
-    width: 340px; height: 340px;
-    background: radial-gradient(circle, rgba(255,255,255,.10), transparent 70%);
-    pointer-events: none;
-  }
-  .hero-inner { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
-  .eyebrow {
-    display: inline-block;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: .12em;
-    text-transform: uppercase;
-    background: rgba(255,255,255,.14);
-    border: 1px solid rgba(255,255,255,.28);
-    padding: .3rem .7rem;
-    border-radius: 1rem;
-    margin-bottom: 1.15rem;
-  }
-  header.hero h1 {
-    margin: 0 0 .8rem;
-    font-size: clamp(1.9rem, 3.8vw, 2.9rem);
-    font-weight: 700;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-    max-width: 20ch;
-  }
-  header.hero p.lede {
-    margin: 0;
-    font-size: clamp(1rem, 1.4vw, 1.15rem);
-    max-width: 76ch;
-    color: rgba(255,255,255,.93);
-  }
+  main { max-width:1200px; margin:0 auto; padding:2.25rem 1.5rem 3rem; }
 
-  /* ---- Content shell ---- */
-  main { max-width: 1200px; margin: 0 auto; padding: 2.25rem 1.5rem 3rem; }
+  .sample { background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--brand); border-radius:0 8px 8px 0; box-shadow:var(--shadow); padding:1.25rem 1.4rem; margin-bottom:1.75rem; }
+  .sample h2 { margin:0 0 .8rem; font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .sample .facts { display:flex; flex-wrap:wrap; gap:.55rem; }
+  .chip { display:inline-flex; align-items:center; gap:.4rem; font-size:.8125rem; font-weight:600; padding:.32rem .65rem; border-radius:1rem; background:var(--recess); color:var(--ink); border:1px solid var(--border); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .chip .dot { width:.55rem; height:.55rem; border-radius:50%; flex:none; background:var(--brand); }
+  .chip.green { background:var(--ok-bg); border-color:color-mix(in srgb,var(--ok) 35%,var(--border)); color:#1c531f; }
+  .chip.amber { background:var(--warn-bg); border-color:color-mix(in srgb,var(--warn) 40%,var(--border)); color:#7a4a02; }
+  .chip.red { background:var(--miss-bg); border-color:var(--miss-bd); color:#8a0311; }
+  .chip.green .dot { background:var(--ok); } .chip.amber .dot { background:var(--warn); } .chip.red .dot { background:var(--miss); }
 
-  /* ---- Sample submission strip ---- */
-  .sample {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--brand);
-    border-radius: 0 8px 8px 0;
-    box-shadow: var(--shadow);
-    padding: 1.25rem 1.4rem;
-    margin-bottom: 1.75rem;
-  }
-  .sample h2 {
-    margin: 0 0 .8rem;
-    font-size: .75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    color: var(--muted);
-  }
-  .sample .facts { display: flex; flex-wrap: wrap; gap: .55rem; }
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: .4rem;
-    font-size: .8125rem;
-    font-weight: 600;
-    padding: .32rem .65rem;
-    border-radius: 1rem;
-    background: var(--recess);
-    color: var(--ink);
-    border: 1px solid var(--border);
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-  }
-  .chip .dot { width: .55rem; height: .55rem; border-radius: 50%; flex: none; background: var(--brand); }
-  .chip.green { background: var(--produced-bg); border-color: color-mix(in srgb, var(--produced) 35%, var(--border)); color: #1c531f; }
-  .chip.amber { background: var(--partial-bg);  border-color: color-mix(in srgb, var(--partial) 40%, var(--border));  color: #7a4a02; }
-  .chip.red   { background: var(--notprod-bg);  border-color: var(--notprod-bd); color: #8a0311; }
-  .chip.green .dot { background: var(--produced); }
-  .chip.amber .dot { background: var(--partial); }
-  .chip.red .dot   { background: var(--notprod); }
+  .intro { margin-bottom:2rem; }
+  .intro p { margin:0 0 .85rem; max-width:84ch; color:var(--text-2); }
+  .intro strong { color:var(--brand-dark); }
 
-  /* ---- Intro ---- */
-  .intro { margin-bottom: 2rem; }
-  .intro p { margin: 0 0 .85rem; max-width: 82ch; color: var(--text-2); }
-  .intro strong { color: var(--brand-dark); }
+  .legend { display:flex; flex-wrap:wrap; gap:1rem 1.75rem; background:var(--recess); border:1px solid var(--border); border-radius:8px; padding:1rem 1.25rem; margin:1.25rem 0 0; font-size:.8125rem; }
+  .legend .li { display:flex; align-items:flex-start; gap:.55rem; max-width:38ch; }
+  .legend .sw { width:.85rem; height:.85rem; border-radius:3px; flex:none; margin-top:.15rem; }
+  .legend .sw.g { background:var(--ok); } .legend .sw.a { background:var(--warn); } .legend .sw.r { background:var(--miss); } .legend .sw.p { background:var(--brand-dark); }
+  .legend b { color:var(--ink); } .legend span.t { color:var(--muted); }
 
-  /* ---- Legend ---- */
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem 1.75rem;
-    background: var(--recess);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1rem 1.25rem;
-    margin: 1.25rem 0 0;
-    font-size: .8125rem;
-  }
-  .legend .li { display: flex; align-items: flex-start; gap: .55rem; max-width: 34ch; }
-  .legend .sw { width: .85rem; height: .85rem; border-radius: 3px; flex: none; margin-top: .15rem; }
-  .legend .sw.g { background: var(--produced); }
-  .legend .sw.a { background: var(--partial); }
-  .legend .sw.r { background: var(--notprod); }
-  .legend b { color: var(--ink); }
-  .legend span.t { color: var(--muted); }
+  .section-label { font-size:1.375rem; font-weight:700; color:var(--ink); letter-spacing:-0.01em; margin:2.5rem 0 1.25rem; display:flex; align-items:center; gap:.75rem; }
+  .section-label::before { content:""; width:4px; height:1.5rem; background:var(--brand); border-radius:2px; }
 
-  .section-label {
-    font-size: 1.375rem;
-    font-weight: 700;
-    color: var(--ink);
-    letter-spacing: -0.01em;
-    margin: 2.5rem 0 1.25rem;
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-  }
-  .section-label::before {
-    content: "";
-    width: 4px; height: 1.5rem;
-    background: var(--brand);
-    border-radius: 2px;
-  }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:1.5rem; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); padding:1.5rem 1.5rem 1.35rem; display:flex; flex-direction:column; transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease; }
+  .card:hover { transform:translateY(-4px); box-shadow:var(--shadow-lg); border-color:color-mix(in srgb,var(--brand) 45%,var(--border)); }
+  .card-top { display:flex; align-items:center; gap:.8rem; margin-bottom:.9rem; }
+  .num { flex:none; width:2.5rem; height:2.5rem; border-radius:8px; background:var(--blue-tint); color:var(--brand-dark); font-weight:700; font-size:1.05rem; display:flex; align-items:center; justify-content:center; font-variant-numeric:tabular-nums; }
+  .card h3 { margin:0; font-size:1.375rem; font-weight:700; color:var(--ink); line-height:1.15; letter-spacing:-0.01em; }
+  .thesis { font-size:.9375rem; margin:0 0 1rem; color:var(--text-2); line-height:1.55; }
+  .job { font-size:.8125rem; color:var(--text-2); background:var(--recess); border-left:3px solid var(--blue-tint-bd); border-radius:0 6px 6px 0; padding:.6rem .8rem; margin:0 0 1.1rem; }
+  .job b { color:var(--muted); text-transform:uppercase; font-size:.6875rem; letter-spacing:.05em; font-weight:600; display:block; margin-bottom:.25rem; }
+  .card-footer { margin-top:auto; display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
+  .badge-feas { font-size:.75rem; font-weight:600; color:var(--ok); display:inline-flex; align-items:center; gap:.4rem; background:var(--ok-bg); border:1px solid color-mix(in srgb,var(--ok) 30%,var(--border)); padding:.3rem .6rem; border-radius:1rem; }
+  .badge-feas .dot { width:.5rem; height:.5rem; border-radius:50%; background:var(--ok); }
+  .open-btn { display:inline-flex; align-items:center; gap:.45rem; background:var(--brand); color:#fff; text-decoration:none; font-weight:700; font-size:.875rem; padding:.58rem 1.05rem; border-radius:6px; transition:background .15s ease; }
+  .open-btn:hover { background:color-mix(in srgb,var(--brand) 82%,#000); }
+  .open-btn:focus-visible { outline:2px solid var(--brand-dark); outline-offset:2px; }
 
-  /* ---- Card grid ---- */
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 1.5rem;
-  }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: var(--shadow);
-    padding: 1.5rem 1.5rem 1.35rem;
-    display: flex;
-    flex-direction: column;
-    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-  }
-  .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: color-mix(in srgb, var(--brand) 45%, var(--border)); }
+  .archive { margin-top:3.5rem; padding-top:1.75rem; border-top:1px solid var(--border); }
+  .archive + .archive { margin-top:2rem; padding-top:1.5rem; }
+  .archive h2 { font-size:.9375rem; font-weight:700; color:var(--muted); margin:0 0 .35rem; }
+  .archive p { font-size:.8125rem; color:var(--muted); margin:0 0 1rem; max-width:78ch; }
+  .archive-list { display:flex; flex-wrap:wrap; gap:.6rem; }
+  .archive-list a { font-size:.8125rem; font-weight:600; color:var(--text-2); text-decoration:none; background:var(--surface); border:1px solid var(--border); border-radius:1rem; padding:.38rem .85rem; transition:border-color .15s ease,color .15s ease; }
+  .archive-list a:hover { border-color:var(--brand); color:var(--brand); }
+  .archive-list a .old { color:var(--muted); font-weight:400; }
 
-  .card-top { display: flex; align-items: center; gap: .8rem; margin-bottom: .9rem; }
-  .num {
-    flex: none;
-    width: 2.5rem; height: 2.5rem;
-    border-radius: 8px;
-    background: var(--blue-tint);
-    color: var(--brand-dark);
-    font-weight: 700;
-    font-size: 1.05rem;
-    display: flex; align-items: center; justify-content: center;
-    font-variant-numeric: tabular-nums;
-  }
-  .card h3 { margin: 0; font-size: 1.375rem; font-weight: 700; color: var(--ink); line-height: 1.15; letter-spacing: -0.01em; }
+  footer { max-width:1200px; margin:0 auto; padding:1.75rem 1.5rem 2.5rem; color:var(--muted); font-size:.8125rem; }
+  footer strong { color:var(--brand-dark); }
+  footer code { background:var(--recess); border:1px solid var(--border); border-radius:3px; padding:0 .3em; font-size:.95em; }
 
-  .thesis { font-size: .9375rem; margin: 0 0 1rem; color: var(--text-2); line-height: 1.55; }
-  .job {
-    font-size: .8125rem;
-    color: var(--text-2);
-    background: var(--recess);
-    border-left: 3px solid var(--blue-tint-bd);
-    border-radius: 0 6px 6px 0;
-    padding: .6rem .8rem;
-    margin: 0 0 1.1rem;
-  }
-  .job b {
-    color: var(--muted);
-    text-transform: uppercase;
-    font-size: .6875rem;
-    letter-spacing: .05em;
-    font-weight: 600;
-    display: block;
-    margin-bottom: .25rem;
-  }
-
-  .card-footer { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
-  .badge-feas {
-    font-size: .75rem;
-    font-weight: 600;
-    color: var(--produced);
-    display: inline-flex; align-items: center; gap: .4rem;
-    background: var(--produced-bg);
-    border: 1px solid color-mix(in srgb, var(--produced) 30%, var(--border));
-    padding: .3rem .6rem;
-    border-radius: 1rem;
-  }
-  .badge-feas .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--produced); }
-
-  .open-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: .45rem;
-    background: var(--brand);
-    color: #fff;
-    text-decoration: none;
-    font-weight: 700;
-    font-size: .875rem;
-    padding: .58rem 1.05rem;
-    border-radius: 6px;
-    transition: background .15s ease;
-  }
-  .open-btn:hover { background: color-mix(in srgb, var(--brand) 82%, #000); }
-  .open-btn:focus-visible { outline: 2px solid var(--brand-dark); outline-offset: 2px; }
-
-  /* ---- Archive (prior rounds) ---- */
-  .archive {
-    margin-top: 3.5rem;
-    padding-top: 1.75rem;
-    border-top: 1px solid var(--border);
-  }
-  .archive + .archive { margin-top: 2rem; padding-top: 1.5rem; }
-  .archive h2 {
-    font-size: .9375rem;
-    font-weight: 700;
-    color: var(--muted);
-    margin: 0 0 .35rem;
-  }
-  .archive p { font-size: .8125rem; color: var(--muted); margin: 0 0 1rem; max-width: 74ch; }
-  .archive-list { display: flex; flex-wrap: wrap; gap: .6rem; }
-  .archive-list a {
-    font-size: .8125rem;
-    font-weight: 600;
-    color: var(--text-2);
-    text-decoration: none;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 1rem;
-    padding: .38rem .85rem;
-    transition: border-color .15s ease, color .15s ease;
-  }
-  .archive-list a:hover { border-color: var(--brand); color: var(--brand); }
-  .archive-list a .old { color: var(--muted); font-weight: 400; }
-
-  /* ---- Footer ---- */
-  footer {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1.75rem 1.5rem 2.5rem;
-    color: var(--muted);
-    font-size: .8125rem;
-  }
-  footer strong { color: var(--brand-dark); }
-  footer code { background: var(--recess); border: 1px solid var(--border); border-radius: 3px; padding: 0 .3em; font-size: .95em; }
-
-  @media (max-width: 720px) {
-    .grid { grid-template-columns: 1fr; }
-  }
+  @media (max-width:720px) { .grid { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -319,9 +96,9 @@
 
   <header class="hero">
     <div class="hero-inner">
-      <span class="eyebrow">Design Round 3 · 4 Converged Concepts</span>
+      <span class="eyebrow">Design Round 3 · 6 close variations</span>
       <h1>Astrus Submission Summary</h1>
-      <p class="lede">Four tight variations on one direction: a single, beautiful Salesforce card pinned to the top of an Astrus submission that an underwriter reads in <strong>one glance</strong> — instantly seeing, line of business by line of business, <strong>what was produced and what is missing</strong> across the two things they care about most: <strong>exposures</strong> and <strong>loss runs</strong>. Each concept renders the same live submission and is buildable as a light-mode Lightning Web Component.</p>
+      <p class="lede">Six close variations on one idea from the <strong>Jul-13 Underwriter-Controlled Reprocessing workshop</strong>: a standardized card pinned to the top of the Quality tab that an underwriter reads in <strong>one glance</strong> — line of business by line of business, <strong>are the exposures here (how many, how much) and are the loss runs here</strong> — plus the <strong>clearance essentials</strong> (revenue, NAICS, SIC). Same submission, same data, same structure in all six; they differ only in layout, so you can filter to the treatment that feels right. Each is buildable as a light-mode Lightning Web Component.</p>
     </div>
   </header>
 
@@ -330,10 +107,10 @@
       <h2>Shared sample submission — every concept renders this</h2>
       <div class="facts">
         <span class="chip"><span class="dot"></span>A &amp; B Painting, Inc. · SUB 022667</span>
-        <span class="chip">3 named insureds · New · Artisan Contractor</span>
+        <span class="chip">3 named insureds · New · Clearance Requested</span>
         <span class="chip">CA + HI · Broker R2 Solutions · Chubb · TPA ESIS</span>
         <span class="chip green"><span class="dot"></span>WC payroll $4,928,350</span>
-        <span class="chip green"><span class="dot"></span>GL revenue $8,500,000 (+$1.05M sub)</span>
+        <span class="chip green"><span class="dot"></span>GL revenue $8,500,000 (incl. $1.05M sub)</span>
         <span class="chip green"><span class="dot"></span>Commercial Auto — CA 31 · HI 2 power units</span>
         <span class="chip amber"><span class="dot"></span>Excess Liability — Partial (no effective date)</span>
         <span class="chip red"><span class="dot"></span>Loss runs — Not produced</span>
@@ -341,49 +118,56 @@
     </section>
 
     <section class="intro">
-      <p>These candidates answer an underwriter's first questions before they open the file: <strong>who is the applicant, which lines of business are on the submission, is each line's exposure present (and how much), and are the loss runs here?</strong> The organizing axis is the <strong>line of business</strong>; under each one the card shows a present / count / total scan for <strong>exposure</strong> and for <strong>loss runs</strong>, so the whole picture reads &ldquo;exposures are here, loss runs are missing&rdquo; in seconds. The four differ only in layout and hierarchy — not in metaphor. All are one cohesive card (not a dashboard), light mode only, no charts-for-charts'-sake, no filler.</p>
+      <p>Every concept answers the underwriter's first questions before they open the file: <strong>which lines of business came in, is each line's exposure present (how many, and what's the total), and are the loss runs here?</strong> The organizing unit is the <strong>line of business</strong> — under each one, sub-tiles give a present / count / total read for <strong>exposure</strong> and for <strong>loss history</strong>. A <strong>clearance tile</strong> carries the rest of what's needed to clear (revenue, NAICS, SIC, effective date, primary state). The two state carve-outs — <strong>Hawaii Commercial Auto</strong> and <strong>Connecticut GL</strong> — appear <strong>only when relevant</strong>; on this submission HI Auto shows (2 Hawaii units) and CT GL does not. Standardized checkbox-style status, no freeform AI prose — so the card reads the same way every time. All six are one card (not a dashboard), light mode only.</p>
 
-      <div class="legend" aria-label="Per-line-of-business status legend">
-        <div class="li"><span class="sw g"></span><span><b>Produced</b> — <span class="t">the line is present and its expected item was produced (WC payroll, GL revenue, an Auto power-unit count, or a loss run).</span></span></div>
-        <div class="li"><span class="sw a"></span><span><b>Partial</b> — <span class="t">produced, but a specific expected field is verifiably empty (here, no effective date).</span></span></div>
-        <div class="li"><span class="sw r"></span><span><b>Not produced</b> — <span class="t">the item was requested on the submission but nothing came back (here, every line's loss runs).</span></span></div>
+      <div class="legend" aria-label="Status legend">
+        <div class="li"><span class="sw g"></span><span><b>Present</b> — <span class="t">the item was produced; the value is shown (payroll, revenue, a vehicle count, a code).</span></span></div>
+        <div class="li"><span class="sw a"></span><span><b>Partial</b> — <span class="t">produced, but one expected field is verifiably empty (here, no effective date on Excess).</span></span></div>
+        <div class="li"><span class="sw r"></span><span><b>Not produced</b> — <span class="t">requested on the submission but nothing came back (here, every line's loss runs).</span></span></div>
+        <div class="li"><span class="sw p"></span><span><b>Carve-outs</b> — <span class="t">Hawaii Auto &amp; Connecticut GL show only when relevant.</span></span></div>
       </div>
     </section>
 
-    <h2 class="section-label">The four concepts</h2>
+    <h2 class="section-label">The six concepts</h2>
     <div class="grid" id="grid"></div>
 
     <section class="archive" aria-label="Round 2 archive">
       <h2>Round 2 — superseded</h2>
-      <p>The six round-2 concepts, kept for reference. Feedback: tiles too big, some read as dashboards or card-stacks, and priority/importance wasn't being communicated — so round 3 converges on one card with right-sized gradient LOB tiles and a present/missing scan.</p>
+      <p>The six round-2 concepts, kept for reference. Feedback from the workshop: they were over-designed dashboards; the brief is a standardized, at-a-glance checklist of what came in — so round 3 rebuilds around per-LOB exposure + loss-history sub-tiles and a clearance tile.</p>
       <div class="archive-list" id="archive-v2"></div>
     </section>
 
     <section class="archive" aria-label="Round 1 archive">
       <h2>Round 1 — superseded</h2>
-      <p>The original six concepts. Round-2 feedback removed dark mode, extraction-confidence, reprocessing controls, tabs, and the timeline/story and split-ledger layouts — so these are archived, not featured.</p>
+      <p>The original six concepts. Round-2 feedback removed dark mode, extraction-confidence, reprocessing controls, and tabs — so these are archived, not featured.</p>
       <div class="archive-list" id="archive-v1"></div>
     </section>
   </main>
 
   <footer>
-    <p>These are <strong>static HTML/CSS mockups</strong> of a future Lightning Web Component — hand-rolled to match SLDS tokens, type ladder, and status semantics, with no external frameworks, fonts, or CDNs. Every pattern maps to a real LWC (base <code>lightning-*</code> components, Lightning Data Service, inline SVG/CSS, CSS gradients in the scoped stylesheet). Light mode only. Sample data reflects the alliantinsurance--qa record SUB 022667.</p>
+    <p>These are <strong>static HTML/CSS mockups</strong> of a future Lightning Web Component (<code>c-astrus-submission-summary</code>) pinned to the top of the Quality tab — hand-rolled to match SLDS tokens, type ladder, and status semantics, with no external frameworks, fonts, or CDNs. Data comes from <code>getRecord</code> + an Apex <code>getSummary()</code> returning per-LOB exposure/loss rows and clearance items. Light mode only. Sample data reflects the alliantinsurance--qa record SUB 022667.</p>
   </footer>
 
 <script>
   const CONCEPTS = [
-    { n:"01", slug:"01-lob-tile-grid.html", name:"LOB Tile Grid",
-      thesis:"Gradient line-of-business tiles as the hero — a tidy, right-sized grid where each tile carries a per-LOB present / count / total scan for both exposure and loss runs, with the loss-history gap called out in a prominent band alongside.",
-      job:"Which lines are produced, what's the exposure, and where's the gap?" },
-    { n:"02", slug:"02-priority-ranked.html", name:"Priority Ranked",
-      thesis:"One card that flows top-to-bottom in the underwriter's scan order — lines of business and their exposures first, then the loss-run status, then quiet context — with visual weight tapering as priority drops.",
-      job:"Walk me down what matters, most important first." },
-    { n:"03", slug:"03-exposure-led.html", name:"Exposure Led",
-      thesis:"Leads with the money — headline exposures up top — then resolves into the same right-sized gradient LOB tiles and a first-class loss-history band. One card, deliberately not a dashboard.",
-      job:"How big is this account, and are the loss runs here?" },
-    { n:"04", slug:"04-compact-executive.html", name:"Compact Executive",
-      thesis:"The refined best-of round-2's Executive Hero: filler removed (no fleet bar, no Term, no LOB-count), the gradient tiles kept and right-sized, each with its exposure + loss-run scan, and loss history promoted to a first-class element.",
-      job:"Give me the headline of this submission in one confident glance." },
+    { n:"01", slug:"01-coverage-tiles.html", name:"Coverage Tiles",
+      thesis:"The literal read of the brief: each line of business is a tile, and inside sit two sub-tiles — an Exposure sub-tile (present · count · total) and a Loss-history sub-tile. A clearance tile below carries revenue, NAICS, and SIC.",
+      job:"Line by line — are the exposures and loss runs here?" },
+    { n:"02", slug:"02-coverage-rows.html", name:"Coverage Rows",
+      thesis:"The same content as a single-column checklist. Each line of business is a full-width row — name and status on the left, the exposure and loss-history sub-tiles on the right — so you scan straight down the card.",
+      job:"Walk the lines top to bottom." },
+    { n:"03", slug:"03-compact-grid.html", name:"Compact Grid",
+      thesis:"A denser take: a tight grid of mini-tiles with the exposure and loss sub-tiles stacked vertically inside each. The version that takes the least height at the top of the tab.",
+      job:"Keep it tight — I want it small at the top." },
+    { n:"04", slug:"04-status-chips.html", name:"Status Chips",
+      thesis:"Status-forward. Each line leads with a big Present / Partial glyph and word, with the exposures and loss runs shown as compact present·count·total pill chips beneath — the green/red scan dominates.",
+      job:"Show me green and red first, detail second." },
+    { n:"05", slug:"05-flat-ledger.html", name:"Flat Ledger",
+      thesis:"The quietest, most precise sibling — flat surfaces, hairline rules, no gradients. Exposure and loss figures line up in aligned columns down the card, like a refined underwriting ledger.",
+      job:"Give me the numbers, lined up." },
+    { n:"06", slug:"06-mini-tiles.html", name:"Mini-Tiles",
+      thesis:"The most literal tile-in-tile. Every exposure, loss run, and clearance item is its own small bordered mini-tile with a corner check (or a red X when missing) — the nesting is unmistakable.",
+      job:"Make each present / missing item its own little tile." },
   ];
 
   const ARCHIVE_V2 = [

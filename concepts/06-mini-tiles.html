@@ -1,0 +1,376 @@
+<!--
+  ============================================================================
+  ASTRUS SUBMISSION SUMMARY — CONCEPT 06 "MINI-TILES"  (ROUND 3 · rebuilt to the Jul-13 workshop)
+  ----------------------------------------------------------------------------
+  Source of truth: "Astrus Underwriter-Controlled Reprocessing Solution Workshop"
+  (Tyler + Rich + Josh, Jul 13 2026). Rich's brief: an at-a-glance, standardized,
+  2-second read of WHAT CAME IN on a submission — NOT freeform LLM prose (it "reads
+  different every time"); standardized so an underwriter knows exactly where to look.
+
+  CONCEPT 06 IS A LAYOUT VARIATION of the anchor (Concept 01) — same locked data,
+  tokens, icons, vocabulary, legend, header. The distinguishing move: the most
+  LITERAL "tile inside a tile." Each line of business is a tile (2 across on wide
+  screens). INSIDE it, the Exposure and Loss-history sub-tiles are rendered as
+  distinct little bordered MINI-TILES (small rounded cards) — each with its own
+  status icon in the CORNER, a label, a big count/number, and a total — so the
+  nesting is unmistakable: a tile carrying sub-tiles on it. The Clearance section
+  is a tile whose sub-tiles (Revenue, NAICS, SIC, Effective date, Primary state)
+  are the SAME mini-tile component, each green with a corner check (a missing one
+  would be red with a corner X). Every present/count/total unit is a visually
+  self-contained mini-tile.
+
+  STRUCTURE (exactly as Tyler specified):
+    • ONE tile per LINE OF BUSINESS, green check = present. Regular set = WC, GL,
+      Commercial Auto, Excess. Two conditional carve-outs, shown ONLY IF RELEVANT:
+        - Connecticut GL   (only if CT GL exposures)  -> NOT shown here (no CT)
+        - Hawaii Comm.Auto (only if HI vehicles)      -> SHOWN here (2 HI units)
+    • Inside each LOB tile, two mini-tiles (green check / amber triangle / red X):
+        - EXPOSURE     : present? · how many · total $
+        - LOSS HISTORY : present? · how many · total
+    • A CLEARANCE tile with mini-tiles for the other things needed to clear:
+        Revenue (+amount) · NAICS · SIC · Effective date · Primary state.
+    • Standalone summary, pinned to the TOP of the Quality tab (placement chosen
+      in the workshop: "standalone summary only").
+
+  LWC MAPPING: c-astrus-submission-summary on the Submission record page.
+    @wire(getRecord,{recordId, fields:[Name, Status__c, New_Renewal__c,
+      Submitting_Broker_Text__c, Carrier__c, TPA__c, Description_of_Operations__c,
+      Effective_Date__c, NAICS__c, SIC_Code__c, Annual_Revenue__c ...]}) +
+    Apex @wire getSummary() returning { lobs:[{name, states[], status,
+      exposure:{present,count,total,unit,note}, loss:{present,count,total}}],
+      clearance:[{label, present, value}] }.  Each exposure/loss/clearance datum
+      renders as a mini-tile; tiles render N lobs -> expandable.
+    Status derived in Apex (Produced / Partial / Not produced).
+    NEVER rendered: confidence %, reprocess controls, tabs, dark mode. Word is
+    "Produced", never "received". Sample data = alliantinsurance--qa SUB 022667;
+    per-LOB counts/totals are the real anchors (payroll $4,928,350, revenue
+    $8,500,000, 31 CA + 2 HI power units); loss history is genuinely not produced.
+    LWS-safe: system fonts, inline CSS/SVG, no CDN / @font-face / eval.
+  ============================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Astrus Submission Summary — Mini-Tiles</title>
+<style>
+  :root {
+    --brand:#0176d3; --brand-dark:#032d60;
+    --ink:#181818; --text-2:#514f4d; --muted:#706e6b;
+    --border:#e5e5e5; --surface:#ffffff; --recess:#fafaf9; --canvas:#f3f2f2;
+    --blue-tint:#e8f4fd; --blue-tint-bd:#c9e5f9;
+    --ok:#2e7d32;   --ok-bg:#edf7ed;   --ok-bd:#cde8ce;
+    --warn:#a86403; --warn-bg:#fff8e1; --warn-bd:#f3e2b0;
+    --miss:#ba0517; --miss-bg:#fef0f0; --miss-bd:#f5c0c0;
+    --shadow-card:0 4px 16px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-mini:0 1px 2px rgba(0,0,0,0.05);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body {
+    font-family:var(--font); color:var(--ink); background:var(--canvas);
+    line-height:1.5; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    padding:40px 24px 64px; font-variant-numeric:tabular-nums;
+  }
+  .stage { max-width:920px; margin:0 auto; }
+  .stage-note { font-size:0.75rem; color:var(--muted); margin:0 0 16px 2px; }
+  .stage-note strong { color:var(--text-2); font-weight:600; }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow-card); overflow:hidden; }
+
+  /* ---- header (quiet orientation) ---- */
+  .head { padding:22px 26px 18px; border-bottom:1px solid var(--border); }
+  .eyebrow { display:flex; align-items:center; flex-wrap:wrap; gap:9px; font-size:0.75rem; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:var(--muted); margin-bottom:9px; }
+  .eyebrow .sub { color:var(--brand-dark); }
+  .eyebrow .d { width:3px; height:3px; border-radius:50%; background:#c9c7c5; }
+  .pill { text-transform:none; letter-spacing:0; font-weight:600; color:var(--text-2); background:var(--recess); border:1px solid var(--border); border-radius:100px; padding:2px 10px; font-size:0.6875rem; }
+  .applicant { font-size:1.5rem; line-height:1.15; font-weight:700; letter-spacing:-0.015em; margin:0; }
+  .subline { margin-top:6px; font-size:0.8125rem; color:var(--text-2); }
+  .subline b { color:var(--ink); }
+  .subline .rest { color:var(--muted); }
+  .chips { margin-top:13px; display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { font-size:0.6875rem; font-weight:600; color:var(--text-2); background:#fff; border:1px solid var(--border); border-radius:4px; padding:3px 8px; }
+  .chip .k { color:var(--muted); }
+  .chip.geo { background:var(--blue-tint); border-color:var(--blue-tint-bd); color:var(--brand-dark); }
+
+  /* ---- zone label ---- */
+  .zone { padding:20px 26px 0; }
+  .zone-head { display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:12px; }
+  .zone-label { font-size:0.75rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); margin:0; }
+  .zone-hint { font-size:0.75rem; color:var(--muted); }
+  .zone-hint b { color:var(--ink); }
+  .zone-hint .r { color:var(--miss); }
+
+  /* ---- LOB tiles ---- */
+  .lobs { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .lob { border:1px solid var(--border); border-left-width:4px; border-radius:0 8px 8px 0; padding:13px 15px 15px; background:var(--surface); min-width:0; }
+  .lob.ok   { border-left-color:var(--ok);   background:linear-gradient(100deg,var(--ok-bg) 0%,#fff 58%); }
+  .lob.warn { border-left-color:var(--warn); background:linear-gradient(100deg,var(--warn-bg) 0%,#fff 58%); }
+  .lob.wide { grid-column:1 / -1; }
+
+  .lob-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .lob-name { font-size:0.9375rem; font-weight:700; letter-spacing:-0.01em; }
+  .lob-meta { margin-top:3px; display:flex; align-items:center; flex-wrap:wrap; gap:5px; }
+  .geo { font-size:0.625rem; font-weight:700; letter-spacing:0.03em; color:var(--brand-dark); background:var(--blue-tint); border:1px solid var(--blue-tint-bd); border-radius:3px; padding:1px 5px; }
+  .carve { font-size:0.625rem; font-weight:600; color:var(--warn); background:var(--warn-bg); border:1px solid var(--warn-bd); border-radius:3px; padding:1px 6px; }
+
+  .status { display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
+  .status svg { width:15px; height:15px; flex:none; }
+  .status.ok   { color:var(--ok); }
+  .status.warn { color:var(--warn); }
+
+  /* ---- MINI-TILES inside each LOB (the concept move: a tile carrying sub-tiles) ---- */
+  .minis { margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .mini {
+    position:relative; border:1px solid var(--border); border-radius:8px;
+    padding:10px 11px 11px; background:#fff; box-shadow:var(--shadow-mini); min-width:0;
+  }
+  .mini.ok   { border-color:var(--ok-bd);   background:var(--ok-bg); }
+  .mini.warn { border-color:var(--warn-bd); background:var(--warn-bg); }
+  .mini.miss { border-color:var(--miss-bd); background:var(--miss-bg); }
+  /* corner status icon */
+  .mini .corner { position:absolute; top:8px; right:8px; width:17px; height:17px; }
+  .mini .lab { font-size:0.625rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); padding-right:22px; }
+  .mini .val { font-size:1.0625rem; font-weight:700; letter-spacing:-0.01em; margin-top:2px; line-height:1.15; }
+  .mini .val .cur { font-size:0.8125rem; color:var(--text-2); }
+  .mini .val .unit { font-size:0.75rem; color:var(--muted); font-weight:600; }
+  .mini.miss .val { color:var(--miss); font-size:0.875rem; }
+  .mini.warn .val { color:var(--warn); font-size:0.875rem; }
+  .mini .total { display:inline-block; font-size:0.6875rem; font-weight:700; color:var(--text-2); background:#fff; border:1px solid var(--border); border-radius:100px; padding:1px 8px; margin-top:7px; }
+  .mini.ok .total { border-color:var(--ok-bd); }
+  .mini .note { font-size:0.6875rem; color:var(--muted); font-weight:400; margin-top:4px; }
+
+  /* ---- clearance tile ---- */
+  .clear { margin:0 26px; border:1px solid var(--border); border-left:4px solid var(--brand); border-radius:0 8px 8px 0; padding:14px 16px 16px; background:linear-gradient(100deg,var(--blue-tint) 0%,#fff 60%); }
+  .clear-top { display:flex; align-items:center; gap:8px; margin-bottom:11px; }
+  .clear-top h3 { margin:0; font-size:0.8125rem; font-weight:700; letter-spacing:0.02em; color:var(--brand-dark); }
+  .clear-top .n { font-size:0.6875rem; font-weight:700; color:var(--ok); background:var(--ok-bg); border:1px solid var(--ok-bd); border-radius:100px; padding:1px 8px; }
+  .clear-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:9px; }
+  /* clearance items reuse the mini-tile component */
+  .clear-grid .mini { background:#fff; border-color:var(--ok-bd); }
+  .clear-grid .mini.miss { border-color:var(--miss-bd); background:var(--miss-bg); }
+  .clear-grid .mini .val { font-size:0.9375rem; }
+  .clear-grid .mini .val small { font-weight:600; color:var(--muted); }
+  .clear-grid .mini.miss .val { color:var(--miss); }
+
+  /* ---- legend ---- */
+  .legend { margin:20px 26px 24px; padding:12px 15px; background:var(--recess); border:1px solid var(--border); border-radius:6px; display:grid; grid-template-columns:repeat(2,1fr); gap:9px 22px; }
+  .leg { display:flex; gap:9px; font-size:0.6875rem; color:var(--muted); line-height:1.4; }
+  .leg .sw { width:14px; height:14px; flex:none; margin-top:1px; }
+  .leg b { font-weight:700; }
+  .leg.ok b { color:var(--ok); } .leg.warn b { color:var(--warn); } .leg.miss b { color:var(--miss); } .leg.cond b { color:var(--brand-dark); }
+
+  @media (max-width:680px) {
+    body { padding:20px 12px 40px; }
+    .head { padding:20px 16px 15px; }
+    .zone { padding:18px 16px 0; }
+    .lobs { grid-template-columns:1fr; }
+    .lob.wide { grid-column:auto; }
+    .minis { grid-template-columns:1fr; }
+    .clear, .legend { margin-left:16px; margin-right:16px; }
+    .legend { grid-template-columns:1fr; }
+    .applicant { font-size:1.3125rem; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <p class="stage-note"><strong>Concept 06 — Mini-Tiles.</strong> One standardized card pinned to the top of the Quality tab. Each line of business is a tile; <strong>inside</strong> each tile sit distinct little bordered mini-tiles — one for <strong>“are the exposures here (how many, how much)?”</strong> and one for <strong>“are the loss runs here?”</strong> — each carrying its own corner status icon. The clearance tile uses the same mini-tile unit. Rendering <strong>A&nbsp;&amp;&nbsp;B&nbsp;Painting,&nbsp;Inc. — SUB&nbsp;022667</strong>.</p>
+
+  <article class="card" aria-label="Submission summary">
+
+    <header class="head">
+      <div class="eyebrow">
+        <span class="sub">SUB&nbsp;022667</span><span class="d"></span>
+        <span class="pill">Clearance Requested</span><span class="d"></span>
+        <span>New</span>
+      </div>
+      <h1 class="applicant">A&nbsp;&amp;&nbsp;B Painting,&nbsp;Inc.</h1>
+      <div class="subline"><b>3 named insureds</b> <span class="rest">· A&nbsp;&amp;&nbsp;B Painting West, Inc. · ACR Commercial Drywall, Inc. — painting &amp; wall-covering, commercial/public projects</span></div>
+      <div class="chips">
+        <span class="chip"><span class="k">Broker</span> R2 Solutions</span>
+        <span class="chip"><span class="k">Carrier</span> Chubb · Place</span>
+        <span class="chip"><span class="k">TPA</span> ESIS</span>
+        <span class="chip"><span class="k">Effective</span> 07/01/2026</span>
+        <span class="chip geo">CA</span>
+        <span class="chip geo">HI</span>
+      </div>
+    </header>
+
+    <!-- ===================== LINES OF BUSINESS ===================== -->
+    <section class="zone" aria-label="Lines of business">
+      <div class="zone-head">
+        <h2 class="zone-label">Lines of business — exposures &amp; loss history</h2>
+        <span class="zone-hint"><b>4</b> produced · <b>1</b> partial · loss runs <span class="r"><b>none produced</b></span></span>
+      </div>
+
+      <div class="lobs">
+
+        <!-- WC -->
+        <div class="lob ok">
+          <div class="lob-top">
+            <div><div class="lob-name">Workers’ Compensation</div><div class="lob-meta"><span class="geo">CA</span></div></div>
+            <span class="status ok"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Present</span>
+          </div>
+          <div class="minis">
+            <div class="mini ok">
+              <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="lab">Exposure · payroll</div>
+              <div class="val"><span class="cur">$</span>4,928,350</div>
+              <span class="total">3 insured entities</span>
+            </div>
+            <div class="mini miss">
+              <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              <div class="lab">Loss history</div>
+              <div class="val">Not produced</div>
+              <div class="note">0 years · $0 incurred on file</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GL -->
+        <div class="lob ok">
+          <div class="lob-top">
+            <div><div class="lob-name">General Liability</div><div class="lob-meta"><span class="geo">CA</span></div></div>
+            <span class="status ok"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Present</span>
+          </div>
+          <div class="minis">
+            <div class="mini ok">
+              <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="lab">Exposure · revenue</div>
+              <div class="val"><span class="cur">$</span>8,500,000</div>
+              <span class="total">incl. $1.05M subcontracted</span>
+            </div>
+            <div class="mini miss">
+              <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              <div class="lab">Loss history</div>
+              <div class="val">Not produced</div>
+              <div class="note">0 years · $0 incurred on file</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Commercial Auto CA -->
+        <div class="lob ok">
+          <div class="lob-top">
+            <div><div class="lob-name">Commercial Auto</div><div class="lob-meta"><span class="geo">CA</span></div></div>
+            <span class="status ok"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Present</span>
+          </div>
+          <div class="minis">
+            <div class="mini ok">
+              <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="lab">Exposure · vehicles</div>
+              <div class="val">31 <span class="unit">power units</span></div>
+              <span class="total">full CA schedule</span>
+            </div>
+            <div class="mini miss">
+              <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              <div class="lab">Loss history</div>
+              <div class="val">Not produced</div>
+              <div class="note">0 years · $0 incurred on file</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Commercial Auto HI — conditional carve-out (shown: HI vehicles exist) -->
+        <div class="lob ok">
+          <div class="lob-top">
+            <div><div class="lob-name">Commercial Auto</div><div class="lob-meta"><span class="geo">HI</span><span class="carve">separate LOB · Hawaii units</span></div></div>
+            <span class="status ok"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Present</span>
+          </div>
+          <div class="minis">
+            <div class="mini ok">
+              <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="lab">Exposure · vehicles</div>
+              <div class="val">2 <span class="unit">power units</span></div>
+              <span class="total">full HI schedule</span>
+            </div>
+            <div class="mini miss">
+              <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              <div class="lab">Loss history</div>
+              <div class="val">Not produced</div>
+              <div class="note">0 years · $0 incurred on file</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Excess — partial, full width -->
+        <div class="lob warn wide">
+          <div class="lob-top">
+            <div><div class="lob-name">Excess Liability</div><div class="lob-meta"><span class="geo">CA</span><span class="geo">HI</span></div></div>
+            <span class="status warn"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8.5 15H1.5z" fill="currentColor"/><rect x="9.1" y="7.4" width="1.8" height="5" rx="0.9" fill="#fff"/><circle cx="10" cy="14.4" r="1" fill="#fff"/></svg>Partial</span>
+          </div>
+          <div class="minis">
+            <div class="mini warn">
+              <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8.5 15H1.5z" fill="var(--warn)"/><rect x="9.1" y="7.4" width="1.8" height="5" rx="0.9" fill="#fff"/><circle cx="10" cy="14.4" r="1" fill="#fff"/></svg>
+              <div class="lab">Exposure</div>
+              <div class="val">No effective date</div>
+              <div class="note">Sits over the primary lines — one field holding it back</div>
+            </div>
+            <div class="mini miss">
+              <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              <div class="lab">Loss history</div>
+              <div class="val">Not produced</div>
+              <div class="note">0 years · $0 incurred on file</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================== CLEARANCE ===================== -->
+    <section class="zone" aria-label="Clearance essentials">
+      <div class="zone-head">
+        <h2 class="zone-label">Clearance essentials</h2>
+        <span class="zone-hint">everything else needed to clear the submission</span>
+      </div>
+    </section>
+    <div class="clear">
+      <div class="clear-top">
+        <h3>Present on the submission</h3>
+        <span class="n">5 of 5</span>
+      </div>
+      <div class="clear-grid">
+        <div class="mini ok">
+          <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="lab">Revenue</div>
+          <div class="val"><small>$</small>8,500,000</div>
+        </div>
+        <div class="mini ok">
+          <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="lab">NAICS</div>
+          <div class="val">238320 <small>Painting</small></div>
+        </div>
+        <div class="mini ok">
+          <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="lab">SIC</div>
+          <div class="val">1721 <small>Painting</small></div>
+        </div>
+        <div class="mini ok">
+          <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="lab">Effective date</div>
+          <div class="val">07/01/2026</div>
+        </div>
+        <div class="mini ok">
+          <svg class="corner" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="lab">Primary state</div>
+          <div class="val">CA <small>+ HI</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== LEGEND ===================== -->
+    <div class="legend" role="note" aria-label="Legend">
+      <div class="leg ok"><span class="sw"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><b>Present</b> — the item was produced; the value is shown.</span></div>
+      <div class="leg miss"><span class="sw"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span><span><b>Not produced</b> — requested but nothing came back (here, every loss run).</span></div>
+      <div class="leg warn"><span class="sw"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8.5 15H1.5z" fill="var(--warn)"/><rect x="9.1" y="7.4" width="1.8" height="5" rx="0.9" fill="#fff"/><circle cx="10" cy="14.4" r="1" fill="#fff"/></svg></span><span><b>Partial</b> — produced, but one expected field is empty (no effective date).</span></div>
+      <div class="leg cond"><span class="sw" style="display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--brand-dark);">＋</span><span><b>Carve-outs</b> — Hawaii Auto and Connecticut GL appear <b>only when relevant</b>; here HI Auto shows, CT GL does not.</span></div>
+    </div>
+
+  </article>
+</div>
+</body>
+</html>
