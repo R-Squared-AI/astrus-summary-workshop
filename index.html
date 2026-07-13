@@ -59,32 +59,18 @@
 
 <script>
   // Every concept, flat and equal. Serial codes (not 1-2-3) so none reads as "the best".
+  // De-duplicated to visually distinct looks. The 01–04 concepts render the current
+  // corrected data (loss present, A&B ⇆ J.H. Lynch toggle); the last four are distinct
+  // earlier layouts kept for their look (they render the earlier sample).
   const CONCEPTS = [
     { s:"4817", name:"Line Boxes",           href:"concepts/01-line-boxes.html",        desc:"Each line as a row of bold, bordered status boxes — one per field." },
     { s:"2093", name:"Bold Boxes",           href:"concepts/02-bold-boxes.html",        desc:"Densest, boldest — tight bars of saturated green / amber / red boxes." },
     { s:"7641", name:"Lead Status",          href:"concepts/03-lead-status.html",       desc:"Status leads each field on the left — no eye-travel to a far-right pill." },
     { s:"3358", name:"Coverage Rail",        href:"concepts/04-coverage-rail.html",     desc:"A bold health rail down the left of each line, colored by its worst field." },
-    { s:"5129", name:"Field Boxes",          href:"concepts/v4/01-field-boxes.html",    desc:"Rows of colored field boxes; the clearance items folded in as one more row." },
-    { s:"8402", name:"Present Lines",        href:"concepts/v4/02-present-lines.html",  desc:"Each field a status line reading Present / Missing." },
-    { s:"1746", name:"Bold Compact",         href:"concepts/v4/03-bold-compact.html",   desc:"Tight bars with a filled status checkbox per field." },
-    { s:"6220", name:"Coverage Tiles",       href:"concepts/v3/01-coverage-tiles.html", desc:"Per-line tiles with Exposure and Loss-history sub-tiles inside." },
-    { s:"9051", name:"Coverage Rows",        href:"concepts/v3/02-coverage-rows.html",  desc:"Single-column line-of-business rows with sub-tiles on the right." },
-    { s:"3487", name:"Compact Grid",         href:"concepts/v3/03-compact-grid.html",   desc:"Dense grid of mini-tiles with sub-tiles stacked." },
-    { s:"7013", name:"Status Chips",         href:"concepts/v3/04-status-chips.html",   desc:"Status-forward; exposure and loss as pill chips." },
-    { s:"2665", name:"Flat Ledger",          href:"concepts/v3/05-flat-ledger.html",    desc:"Flat, hairline, with figures aligned in columns." },
-    { s:"8890", name:"Mini-Tiles",           href:"concepts/v3/06-mini-tiles.html",     desc:"Every value its own small bordered mini-tile." },
-    { s:"4471", name:"Coverage Status Board",href:"concepts/v2/01-coverage-status-board.html", desc:"Per-line traffic-light coverage board." },
-    { s:"1928", name:"Executive Hero",       href:"concepts/v2/02-executive-hero.html", desc:"Big applicant hero with headline coverage." },
-    { s:"5563", name:"Exposure-First",       href:"concepts/v2/03-exposure-first.html", desc:"Leads with the exposures and the money." },
-    { s:"7284", name:"Underwriter Datasheet",href:"concepts/v2/04-underwriter-datasheet.html", desc:"Dense definition-list brief." },
-    { s:"3096", name:"Priority Signal Cards",href:"concepts/v2/05-priority-signal-cards.html", desc:"Priority-ranked signal cards." },
-    { s:"6157", name:"Coverage Map",         href:"concepts/v2/06-coverage-map.html",   desc:"State × line-of-business coverage map." },
-    { s:"2810", name:"Command Center",       href:"concepts/v1/01-command-center.html", desc:"KPI-tile command center." },
-    { s:"9342", name:"Underwriter Brief",    href:"concepts/v1/02-underwriter-brief.html", desc:"Deterministic templated brief." },
-    { s:"4605", name:"Triage Traffic-Light", href:"concepts/v1/03-triage-traffic-light.html", desc:"Red / amber / green present-missing checklist." },
-    { s:"1173", name:"Tabbed Deep-Dive",     href:"concepts/v1/04-tabbed-deep-dive.html", desc:"Tabbed deep-dive layout." },
-    { s:"8038", name:"Timeline / Story",     href:"concepts/v1/05-timeline-story.html", desc:"Submission-status timeline." },
-    { s:"5726", name:"Split Ledger",         href:"concepts/v1/06-split-ledger.html",   desc:"Value vs source-confidence ledger." },
+    { s:"2665", name:"Flat Ledger",          href:"concepts/v3/05-flat-ledger.html",    desc:"Flat and hairline, with the figures aligned in clean columns." },
+    { s:"7284", name:"Underwriter Datasheet",href:"concepts/v2/04-underwriter-datasheet.html", desc:"A dense, typeset definition-list brief." },
+    { s:"6157", name:"Coverage Map",         href:"concepts/v2/06-coverage-map.html",   desc:"A state × line-of-business coverage matrix." },
+    { s:"1928", name:"Executive Hero",       href:"concepts/v2/02-executive-hero.html", desc:"A big applicant hero with headline coverage." },
   ];
 
   document.getElementById("grid").innerHTML = CONCEPTS.map(c => `
