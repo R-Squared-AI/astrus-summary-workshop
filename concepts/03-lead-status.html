@@ -1,0 +1,240 @@
+<!--
+  ============================================================================
+  ASTRUS SUBMISSION SUMMARY — ROUND 5 · "LEAD STATUS"  (evolves Round-4 "Present Lines")
+  ----------------------------------------------------------------------------
+  Round-4 "Present Lines" put the status word in a pill on the FAR RIGHT of each
+  line. Tyler's feedback: "I have to draw my eyes all the way from payroll over to
+  that green oval." Round-5 fixes the eye-travel: the status (bold colored icon +
+  short word — OK / Missing / Partial) LEADS each line on the LEFT, immediately
+  followed by the field label and its value. The eye reads status → field → value
+  left-to-right, top-to-bottom; it never travels to a far-right pill.
+
+  One row per line of business + a final row named "Submission" (was "Clearance").
+  Per-LOB fields are CUSTOM to that line (WC = payroll/class/mod/loss; GL = revenue/
+  loss; Auto = vehicle schedule/garaging/loss; Excess = limits/eff date/loss).
+  Bold colors + bold text; ok=green, warn=amber, miss=red; icon + word (never color
+  alone); tabular-nums. Carve-out badge only when present.
+
+  LWC: c-astrus-submission-summary, top of the Quality tab. getRecord + Apex
+  getSummary() -> {header, lines:[{lob, geo[], carve?, kind?, fields:[{label,value,
+  status}]}]}; the "Submission" line is the identity row (kind:"identity"). Status:
+  Present / Missing / Partial — NEVER "received". No confidence %, reprocess, tabs,
+  or dark mode. Light mode only. Self-contained; LWS-safe.
+
+  SAMPLE DATA: A & B Painting, Inc. — SUB 022667 (alliantinsurance--qa) and
+  J.H. Lynch & Sons, Inc. Both datasets rendered verbatim from the shared DATA
+  object; toggle at top switches between them. Loss runs render PRESENT (green) —
+  live QA data confirms loss history attaches to these LOBs.
+  ============================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Astrus Submission Summary — Lead Status</title>
+<style>
+  :root {
+    --brand:#0176d3; --brand-dark:#032d60;
+    --ink:#151515; --text-2:#3e3e3c; --muted:#5c5a58;
+    --border:#d8dde6; --surface:#ffffff; --recess:#f4f6f9; --canvas:#eef1f6;
+    --ok:#137333;   --ok-bg:#d7f5df;   --ok-bd:#33a852;
+    --warn:#b35309; --warn-bg:#ffe8c2; --warn-bd:#f2a53c;
+    --miss:#c5221f; --miss-bg:#fdd9d7; --miss-bd:#ea4b47;
+    --geo:#0b3d78;  --geo-bg:#dcecfb;  --geo-bd:#9cc8f0;
+    --shadow-card:0 4px 16px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.09);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body { font-family:var(--font); color:var(--ink); background:var(--canvas); line-height:1.4; -webkit-font-smoothing:antialiased; padding:40px 24px 64px; font-variant-numeric:tabular-nums; }
+  .stage { max-width:860px; margin:0 auto; }
+  .stage-note { font-size:0.75rem; color:var(--muted); margin:0 0 16px 2px; }
+  .stage-note strong { color:var(--text-2); font-weight:700; }
+
+  /* submission toggle */
+  .toggle { display:inline-flex; gap:4px; background:var(--recess); border:1px solid var(--border); border-radius:100px; padding:4px; margin:0 0 16px 0; }
+  .toggle button { font-family:var(--font); font-size:0.8125rem; font-weight:800; letter-spacing:-0.01em; color:var(--muted); background:transparent; border:none; border-radius:100px; padding:7px 16px; cursor:pointer; }
+  .toggle button.on { color:#fff; background:var(--brand); box-shadow:0 1px 2px rgba(0,0,0,0.18); }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-card); overflow:hidden; }
+  .head { padding:20px 24px 16px; border-bottom:2px solid var(--border); }
+  .eyebrow { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:0.75rem; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .eyebrow:empty { display:none; }
+  .eyebrow .sub { color:var(--brand-dark); }
+  .eyebrow .pill { text-transform:none; letter-spacing:0; font-weight:700; color:var(--text-2); background:var(--recess); border:1px solid var(--border); border-radius:100px; padding:2px 10px; font-size:0.6875rem; }
+  .eyebrow .d { width:3px; height:3px; border-radius:50%; background:#b9bdc7; }
+  .applicant { font-size:1.5rem; line-height:1.12; font-weight:800; letter-spacing:-0.02em; margin:0; }
+  .subline { margin-top:6px; font-size:0.8125rem; font-weight:600; color:var(--muted); }
+
+  .rows { padding:6px 14px 14px; }
+  .row { display:grid; grid-template-columns:186px 1fr; gap:16px; align-items:start; padding:13px 10px; }
+  .row + .row { border-top:1px solid var(--border); }
+  .row-name { font-size:0.9375rem; font-weight:800; letter-spacing:-0.01em; }
+  .row-boxes { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px; }
+  .geo { font-size:0.625rem; font-weight:800; letter-spacing:0.03em; color:var(--geo); background:var(--geo-bg); border:1px solid var(--geo-bd); border-radius:4px; padding:1px 6px; }
+  .kind { font-size:0.625rem; font-weight:700; color:var(--muted); background:var(--recess); border:1px solid var(--border); border-radius:4px; padding:1px 6px; }
+
+  /* status LEADS each line on the LEFT: [icon][WORD][label][value] */
+  .lines { display:flex; flex-direction:column; gap:7px; }
+  .ln { display:grid; grid-template-columns:19px 74px 1fr; gap:9px; align-items:center; }
+  .ln .ic { width:19px; height:19px; }
+  .ln .word { font-size:0.6875rem; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; }
+  .ln .field { display:flex; align-items:baseline; gap:8px; min-width:0; }
+  .ln .lab { font-size:0.6875rem; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); white-space:nowrap; }
+  .ln .val { font-size:0.9375rem; font-weight:800; letter-spacing:-0.01em; color:var(--ink); }
+  .ln.ok   .word { color:var(--ok); }
+  .ln.warn .word { color:var(--warn); } .ln.warn .val { color:var(--warn); font-size:0.8125rem; }
+  .ln.miss .word { color:var(--miss); } .ln.miss .val { color:var(--miss); font-size:0.8125rem; }
+
+  .row.identity { background:linear-gradient(90deg,#eaf3fc 0%,#fff 55%); border-top:2px solid var(--geo-bd); }
+  .row.identity .row-name { color:var(--brand-dark); }
+
+  .legend { display:flex; flex-wrap:wrap; gap:10px 18px; padding:12px 24px 18px; border-top:1px solid var(--border); background:var(--recess); }
+  .lg { display:inline-flex; align-items:center; gap:7px; font-size:0.75rem; font-weight:700; color:var(--text-2); }
+  .lg .ic { width:16px; height:16px; } .lg.note { color:var(--muted); font-weight:600; }
+
+  @media (max-width:640px) {
+    body { padding:18px 10px 40px; }
+    .row { grid-template-columns:1fr; gap:9px; }
+    .ln { grid-template-columns:19px 66px 1fr; }
+    .applicant { font-size:1.3125rem; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <p class="stage-note"><strong>Round 5 — Lead Status.</strong> Evolves Round-4 "Present Lines". The status (icon + word) now <em>leads</em> each line on the LEFT, right next to the field &mdash; no eye-travel to a far-right pill. One row per line of business, plus a final <em>Submission</em> row.</p>
+
+  <div class="toggle" role="group" aria-label="Choose submission">
+    <button id="tab-ab"  type="button" aria-pressed="true" onclick="render('ab')">A &amp; B Painting</button>
+    <button id="tab-jhl" type="button" aria-pressed="false" onclick="render('jhl')">J.H. Lynch</button>
+  </div>
+
+  <article class="card" aria-label="Submission summary">
+    <header class="head">
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 class="applicant" id="applicant"></h1>
+      <div class="subline" id="subline"></div>
+    </header>
+    <div class="rows" id="rows"></div>
+    <div class="legend" role="note" aria-label="Legend">
+      <span class="lg"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>OK / Present</span>
+      <span class="lg"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8.5 15H1.5z" fill="var(--warn)"/><rect x="9.1" y="7.4" width="1.8" height="5" rx="0.9" fill="#fff"/><circle cx="10" cy="14.4" r="1" fill="#fff"/></svg>Partial</span>
+      <span class="lg"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>Missing</span>
+      <span class="lg note">Status reads left-to-right, right next to each field · carve-outs show only when relevant</span>
+    </div>
+  </article>
+</div>
+
+<script>
+const DATA = {
+  ab: {
+    header:{name:"A & B Painting, Inc.", sub:"SUB 022667", status:"Clearance Requested", tag:"New",
+      meta:"3 named insureds · R2 Solutions · Chubb · Place · ESIS · CA + HI · Eff 07/01/2026"},
+    lines:[
+      {lob:"Workers’ Compensation", geo:["CA"], fields:[
+        {label:"Payroll", value:"$4,928,350", status:"ok"},
+        {label:"Class codes", value:"Present", status:"ok"},
+        {label:"Experience mod", value:"Present", status:"ok"},
+        {label:"Loss runs", value:"$7.9M incurred", status:"ok"}]},
+      {lob:"General Liability", geo:["CA"], fields:[
+        {label:"Revenue", value:"$8,500,000", status:"ok"},
+        {label:"Loss runs", value:"$212K incurred", status:"ok"}]},
+      {lob:"Commercial Auto", geo:["CA"], fields:[
+        {label:"Vehicle schedule", value:"31 units", status:"ok"},
+        {label:"Garaging", value:"CA", status:"ok"},
+        {label:"Loss runs", value:"$606K incurred", status:"ok"}]},
+      {lob:"Commercial Auto", geo:["HI"], carve:"carve-out", fields:[
+        {label:"Vehicle schedule", value:"2 units", status:"ok"},
+        {label:"Loss runs", value:"Present", status:"ok"}]},
+      {lob:"Excess Liability", geo:["CA","HI"], fields:[
+        {label:"Underlying limits", value:"Present", status:"ok"},
+        {label:"Effective date", value:"Missing", status:"warn"},
+        {label:"Loss runs", value:"$0 incurred", status:"ok"}]},
+      {lob:"Submission", kind:"identity", fields:[
+        {label:"Revenue", value:"$8,500,000", status:"ok"},
+        {label:"NAICS", value:"238320", status:"ok"},
+        {label:"SIC", value:"1721", status:"ok"},
+        {label:"Effective date", value:"07/01/2026", status:"ok"},
+        {label:"FEIN", value:"Present", status:"ok"}]}
+    ]},
+  jhl: {
+    header:{name:"J.H. Lynch & Sons, Inc.", sub:"", status:"", tag:"",
+      meta:"Rhode Island · heavy highway construction & trucking · large fleet · R2 Solutions"},
+    lines:[
+      {lob:"Workers’ Compensation", geo:["RI"], fields:[
+        {label:"Payroll", value:"$17,770,000", status:"ok"},
+        {label:"Loss runs", value:"$29.0M · 821 claims", status:"ok"}]},
+      {lob:"General Liability", geo:["RI"], fields:[
+        {label:"Revenue", value:"$75,000,000", status:"ok"},
+        {label:"Loss runs", value:"$12.9M · 1,739 claims", status:"ok"}]},
+      {lob:"Commercial Auto", geo:["RI"], fields:[
+        {label:"Vehicle schedule", value:"249 units", status:"ok"},
+        {label:"Loss runs", value:"$40.0M · 3,797 claims", status:"ok"}]},
+      {lob:"Submission", kind:"identity", fields:[
+        {label:"Revenue", value:"$75,000,000", status:"ok"},
+        {label:"NAICS", value:"Present", status:"ok"},
+        {label:"SIC", value:"Present", status:"ok"},
+        {label:"Effective date", value:"Present", status:"ok"},
+        {label:"FEIN", value:"Present", status:"ok"}]}
+    ]}
+};
+
+const ICON = {
+  ok:'<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  warn:'<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8.5 15H1.5z" fill="var(--warn)"/><rect x="9.1" y="7.4" width="1.8" height="5" rx="0.9" fill="#fff"/><circle cx="10" cy="14.4" r="1" fill="#fff"/></svg>',
+  miss:'<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>'
+};
+const WORD = { ok:"OK", warn:"Partial", miss:"Missing" };
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function render(key){
+  const d = DATA[key], h = d.header;
+
+  // toggle state
+  document.getElementById('tab-ab').classList.toggle('on', key==='ab');
+  document.getElementById('tab-jhl').classList.toggle('on', key==='jhl');
+  document.getElementById('tab-ab').setAttribute('aria-pressed', key==='ab');
+  document.getElementById('tab-jhl').setAttribute('aria-pressed', key==='jhl');
+
+  // header
+  const eb = [];
+  if (h.sub)    eb.push('<span class="sub">'+esc(h.sub)+'</span>');
+  if (h.status) eb.push('<span class="pill">'+esc(h.status)+'</span>');
+  if (h.tag)    eb.push('<span>'+esc(h.tag)+'</span>');
+  document.getElementById('eyebrow').innerHTML = eb.join('<span class="d"></span>');
+  document.getElementById('applicant').textContent = h.name;
+  document.getElementById('subline').textContent = h.meta || '';
+
+  // rows
+  document.getElementById('rows').innerHTML = d.lines.map(line => {
+    const isId = line.kind === 'identity';
+    const boxes = [];
+    (line.geo || []).forEach(g => boxes.push('<span class="geo">'+esc(g)+'</span>'));
+    if (line.carve) boxes.push('<span class="kind">'+esc(line.carve)+'</span>');
+    if (isId)       boxes.push('<span class="kind">applicant</span>');
+
+    const lns = line.fields.map(f => {
+      const st = f.status || 'ok';
+      return '<div class="ln '+st+'">'
+        + ICON[st]
+        + '<span class="word">'+WORD[st]+'</span>'
+        + '<span class="field"><span class="lab">'+esc(f.label)+'</span><span class="val">'+esc(f.value)+'</span></span>'
+        + '</div>';
+    }).join('');
+
+    return '<div class="row'+(isId?' identity':'')+'">'
+      + '<div><div class="row-name">'+esc(line.lob)+'</div>'
+      + (boxes.length ? '<div class="row-boxes">'+boxes.join('')+'</div>' : '')
+      + '</div>'
+      + '<div class="lines">'+lns+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+render('ab');
+</script>
+</body>
+</html>

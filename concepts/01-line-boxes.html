@@ -1,0 +1,262 @@
+<!--
+  ============================================================================
+  ASTRUS SUBMISSION SUMMARY — ROUND 5 · "LINE BOXES"  (refines Round-4 "Field Boxes")
+  ----------------------------------------------------------------------------
+  Round-5 evolution of Round-4 "Field Boxes":
+    • Still one uniform ROW per line of business, but MORE field boxes per line —
+      every field in the data renders as its own bordered, status-tinted box.
+    • The final row is literally named "Submission" (the old "Clearance" title is
+      gone) — it carries the submission-level identity fields (revenue / NAICS /
+      SIC / effective date / FEIN).
+    • Each field box = small status icon + tiny uppercase label + bold value.
+      Status is ADJACENT to each field (inside its box) — never a far-right oval.
+    • BOLD status colors + BOLD text; icon+text always, never color alone.
+      ok=green · warn=amber · miss=red. tabular-nums for figures.
+    • Left of each row: LOB name + small state boxes (geo) + a "carve-out" tag
+      only when the data marks the line as one (A&B has a Hawaii Auto carve-out;
+      J.H. Lynch has none).
+    • Segmented control at the top toggles between two live sample submissions,
+      re-rendering the whole card from DATA.ab / DATA.jhl (default = A&B).
+
+  LWC MAPPING:
+    c-astrus-submission-summary, top of the underwriter Quality tab.
+    getRecord (applicant identity) + Apex getSummary() ->
+      { header, lines:[ {lob, geo[], carve?, kind?, fields:[{label,value,status}]} ] }
+    where per-LOB rows come from the LOB records and the final "Submission" row is
+    the submission/identity record of the same shape.
+    Status vocabulary: Present / Missing / Partial. NEVER "received". No confidence %,
+    no reprocess, no tabs, no dark mode.
+    Sample data = alliantinsurance--qa (A&B Painting SUB 022667 + J.H. Lynch & Sons);
+    loss history is PRESENT per live data. Self-contained; LWS-safe.
+  ============================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Astrus Submission Summary — Line Boxes</title>
+<style>
+  :root {
+    --brand:#0176d3; --brand-dark:#032d60;
+    --ink:#151515; --text-2:#3e3e3c; --muted:#5c5a58;
+    --border:#d8dde6; --surface:#ffffff; --recess:#f4f6f9; --canvas:#eef1f6;
+    --ok:#137333;   --ok-bg:#d7f5df;   --ok-bd:#33a852;
+    --warn:#b35309; --warn-bg:#ffe8c2; --warn-bd:#f2a53c;
+    --miss:#c5221f; --miss-bg:#fdd9d7; --miss-bd:#ea4b47;
+    --geo:#0b3d78;  --geo-bg:#dcecfb;  --geo-bd:#9cc8f0;
+    --carve:#7a3ea8; --carve-bg:#f2e8fb; --carve-bd:#cda9e8;
+    --shadow-card:0 4px 16px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.09);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body { font-family:var(--font); color:var(--ink); background:var(--canvas); line-height:1.45; -webkit-font-smoothing:antialiased; padding:40px 24px 64px; font-variant-numeric:tabular-nums; }
+  .stage { max-width:920px; margin:0 auto; }
+  .stage-note { font-size:0.75rem; color:var(--muted); margin:0 0 16px 2px; }
+  .stage-note strong { color:var(--text-2); font-weight:700; }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-card); overflow:hidden; }
+
+  /* submission toggle — segmented control */
+  .switch { display:flex; gap:4px; padding:12px 16px 0; }
+  .seg { appearance:none; border:1px solid var(--border); background:var(--recess); color:var(--text-2); font-family:inherit; font-size:0.8125rem; font-weight:700; letter-spacing:-0.01em; padding:7px 15px; border-radius:8px; cursor:pointer; transition:background .12s,color .12s,border-color .12s; }
+  .seg:hover { background:#eaeef4; }
+  .seg[aria-pressed="true"] { background:var(--brand); border-color:var(--brand); color:#fff; }
+
+  /* header */
+  .head { padding:14px 24px 16px; border-bottom:2px solid var(--border); }
+  .eyebrow { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:0.75rem; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .eyebrow:empty { display:none; }
+  .eyebrow .sub { color:var(--brand-dark); }
+  .eyebrow .pill { text-transform:none; letter-spacing:0; font-weight:700; color:var(--text-2); background:var(--recess); border:1px solid var(--border); border-radius:100px; padding:2px 10px; font-size:0.6875rem; }
+  .eyebrow .d { width:3px; height:3px; border-radius:50%; background:#b9bdc7; }
+  .applicant { font-size:1.5rem; line-height:1.12; font-weight:800; letter-spacing:-0.02em; margin:0; }
+  .subline { margin-top:6px; font-size:0.8125rem; font-weight:600; color:var(--muted); }
+  .subline:empty { display:none; }
+
+  /* the list of uniform rows */
+  .rows { padding:8px 12px 14px; }
+  .row { display:grid; grid-template-columns:196px 1fr; gap:14px; align-items:start; padding:13px 12px; border-radius:8px; }
+  .row + .row { border-top:1px solid var(--border); }
+  .row:hover { background:var(--recess); }
+
+  .row-id { min-width:0; }
+  .row-name { font-size:0.9375rem; font-weight:800; letter-spacing:-0.01em; color:var(--ink); }
+  .row-boxes { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px; }
+  .geo { font-size:0.625rem; font-weight:800; letter-spacing:0.03em; color:var(--geo); background:var(--geo-bg); border:1px solid var(--geo-bd); border-radius:4px; padding:1px 6px; }
+  .carve { font-size:0.625rem; font-weight:800; letter-spacing:0.02em; color:var(--carve); background:var(--carve-bg); border:1px solid var(--carve-bd); border-radius:4px; padding:1px 6px; }
+
+  /* field boxes: bold, colored, minimal text */
+  .fields { display:flex; flex-wrap:wrap; gap:8px; }
+  .fc { display:inline-flex; align-items:center; gap:8px; border:2px solid; border-radius:8px; padding:7px 11px 7px 9px; font-weight:700; }
+  .fc .ic { width:17px; height:17px; flex:none; }
+  .fc .txt { display:flex; flex-direction:column; line-height:1.15; }
+  .fc .lab { font-size:0.625rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; }
+  .fc .val { font-size:0.9375rem; font-weight:800; letter-spacing:-0.01em; color:var(--ink); }
+  .fc.ok   { background:var(--ok-bg);   border-color:var(--ok-bd); }
+  .fc.ok   .lab { color:var(--ok); }
+  .fc.warn { background:var(--warn-bg); border-color:var(--warn-bd); }
+  .fc.warn .lab { color:var(--warn); } .fc.warn .val { color:var(--warn); }
+  .fc.miss { background:var(--miss-bg); border-color:var(--miss-bd); }
+  .fc.miss .lab { color:var(--miss); } .fc.miss .val { color:var(--miss); }
+
+  /* Submission row = same shape, brand-tinted identity marker */
+  .row.identity .row-name { color:var(--brand-dark); }
+  .row.identity { background:linear-gradient(90deg,#eaf3fc 0%, #fff 60%); border-top:2px solid var(--geo-bd) !important; }
+
+  /* footer legend — compact, bold */
+  .legend { display:flex; flex-wrap:wrap; gap:10px 18px; padding:12px 24px 18px; border-top:1px solid var(--border); background:var(--recess); }
+  .lg { display:inline-flex; align-items:center; gap:7px; font-size:0.75rem; font-weight:700; color:var(--text-2); }
+  .lg .ic { width:16px; height:16px; }
+  .lg.note { color:var(--muted); font-weight:600; }
+
+  @media (max-width:640px) {
+    body { padding:18px 10px 40px; }
+    .row { grid-template-columns:1fr; gap:8px; }
+    .applicant { font-size:1.3125rem; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <p class="stage-note"><strong>Round 5 — Line Boxes.</strong> Refines Round-4 (Field Boxes): one uniform row per line of business, now with a bold status box for <em>every</em> field. The final row is the <strong>Submission</strong> identity row. Toggle between two live QA submissions.</p>
+
+  <article class="card" aria-label="Submission summary">
+    <div class="switch" role="group" aria-label="Choose submission">
+      <button class="seg" type="button" data-key="ab" aria-pressed="true">A &amp; B Painting</button>
+      <button class="seg" type="button" data-key="jhl" aria-pressed="false">J.H. Lynch</button>
+    </div>
+    <header class="head">
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 class="applicant" id="applicant"></h1>
+      <div class="subline" id="subline"></div>
+    </header>
+
+    <div class="rows" id="rows"></div>
+
+    <div class="legend" role="note" aria-label="Legend">
+      <span class="lg"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Present</span>
+      <span class="lg"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8.5 15H1.5z" fill="var(--warn)"/><rect x="9.1" y="7.4" width="1.8" height="5" rx="0.9" fill="#fff"/><circle cx="10" cy="14.4" r="1" fill="#fff"/></svg>Partial / field missing</span>
+      <span class="lg"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>Missing</span>
+      <span class="lg note">Carve-outs (e.g. Hawaii Auto) show only when relevant</span>
+    </div>
+  </article>
+</div>
+
+<script>
+  const DATA = {
+    ab: {
+      header:{name:"A & B Painting, Inc.", sub:"SUB 022667", status:"Clearance Requested", tag:"New",
+        meta:"3 named insureds · R2 Solutions · Chubb · Place · ESIS · CA + HI · Eff 07/01/2026"},
+      lines:[
+        {lob:"Workers’ Compensation", geo:["CA"], fields:[
+          {label:"Payroll", value:"$4,928,350", status:"ok"},
+          {label:"Class codes", value:"Present", status:"ok"},
+          {label:"Experience mod", value:"Present", status:"ok"},
+          {label:"Loss runs", value:"$7.9M incurred", status:"ok"}]},
+        {lob:"General Liability", geo:["CA"], fields:[
+          {label:"Revenue", value:"$8,500,000", status:"ok"},
+          {label:"Loss runs", value:"$212K incurred", status:"ok"}]},
+        {lob:"Commercial Auto", geo:["CA"], fields:[
+          {label:"Vehicle schedule", value:"31 units", status:"ok"},
+          {label:"Garaging", value:"CA", status:"ok"},
+          {label:"Loss runs", value:"$606K incurred", status:"ok"}]},
+        {lob:"Commercial Auto", geo:["HI"], carve:"carve-out", fields:[
+          {label:"Vehicle schedule", value:"2 units", status:"ok"},
+          {label:"Loss runs", value:"Present", status:"ok"}]},
+        {lob:"Excess Liability", geo:["CA","HI"], fields:[
+          {label:"Underlying limits", value:"Present", status:"ok"},
+          {label:"Effective date", value:"Missing", status:"warn"},
+          {label:"Loss runs", value:"$0 incurred", status:"ok"}]},
+        {lob:"Submission", kind:"identity", fields:[
+          {label:"Revenue", value:"$8,500,000", status:"ok"},
+          {label:"NAICS", value:"238320", status:"ok"},
+          {label:"SIC", value:"1721", status:"ok"},
+          {label:"Effective date", value:"07/01/2026", status:"ok"},
+          {label:"FEIN", value:"Present", status:"ok"}]}
+      ]},
+    jhl: {
+      header:{name:"J.H. Lynch & Sons, Inc.", sub:"", status:"", tag:"",
+        meta:"Rhode Island · heavy highway construction & trucking · large fleet · R2 Solutions"},
+      lines:[
+        {lob:"Workers’ Compensation", geo:["RI"], fields:[
+          {label:"Payroll", value:"$17,770,000", status:"ok"},
+          {label:"Loss runs", value:"$29.0M · 821 claims", status:"ok"}]},
+        {lob:"General Liability", geo:["RI"], fields:[
+          {label:"Revenue", value:"$75,000,000", status:"ok"},
+          {label:"Loss runs", value:"$12.9M · 1,739 claims", status:"ok"}]},
+        {lob:"Commercial Auto", geo:["RI"], fields:[
+          {label:"Vehicle schedule", value:"249 units", status:"ok"},
+          {label:"Loss runs", value:"$40.0M · 3,797 claims", status:"ok"}]},
+        {lob:"Submission", kind:"identity", fields:[
+          {label:"Revenue", value:"$75,000,000", status:"ok"},
+          {label:"NAICS", value:"Present", status:"ok"},
+          {label:"SIC", value:"Present", status:"ok"},
+          {label:"Effective date", value:"Present", status:"ok"},
+          {label:"FEIN", value:"Present", status:"ok"}]}
+      ]}
+  };
+
+  const ICONS = {
+    ok:   '<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    warn: '<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8.5 15H1.5z" fill="var(--warn)"/><rect x="9.1" y="7.4" width="1.8" height="5" rx="0.9" fill="#fff"/><circle cx="10" cy="14.4" r="1" fill="#fff"/></svg>',
+    miss: '<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>'
+  };
+
+  // escape text pulled from the data before it enters innerHTML
+  function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // wrap a leading "$" so it can render slightly smaller, like Round 4
+  function fmtValue(v){
+    const s = esc(v);
+    return s.charAt(0) === '$' ? '<span class="cur">$</span>' + s.slice(1) : s;
+  }
+
+  function fieldBox(f){
+    const st = ICONS[f.status] ? f.status : 'ok';
+    return '<span class="fc ' + st + '">' + ICONS[st] +
+      '<span class="txt"><span class="lab">' + esc(f.label) + '</span>' +
+      '<span class="val">' + fmtValue(f.value) + '</span></span></span>';
+  }
+
+  function lineRow(line){
+    const identity = line.kind === 'identity';
+    let tags = '';
+    (line.geo || []).forEach(g => { tags += '<span class="geo">' + esc(g) + '</span>'; });
+    if (line.carve) tags += '<span class="carve">' + esc(line.carve) + '</span>';
+    const boxes = (line.fields || []).map(fieldBox).join('');
+    return '<div class="row' + (identity ? ' identity' : '') + '">' +
+      '<div class="row-id"><div class="row-name">' + esc(line.lob) + '</div>' +
+      '<div class="row-boxes">' + tags + '</div></div>' +
+      '<div class="fields">' + boxes + '</div></div>';
+  }
+
+  function render(key){
+    const d = DATA[key];
+    if (!d) return;
+    const h = d.header;
+
+    // eyebrow: sub · status · tag (skip empties)
+    const parts = [];
+    if (h.sub)    parts.push('<span class="sub">' + esc(h.sub) + '</span>');
+    if (h.status) parts.push('<span class="pill">' + esc(h.status) + '</span>');
+    if (h.tag)    parts.push('<span>' + esc(h.tag) + '</span>');
+    document.getElementById('eyebrow').innerHTML = parts.join('<span class="d"></span>');
+
+    document.getElementById('applicant').textContent = h.name;
+    document.getElementById('subline').textContent = h.meta || '';
+
+    document.getElementById('rows').innerHTML = d.lines.map(lineRow).join('');
+
+    document.querySelectorAll('.seg').forEach(b =>
+      b.setAttribute('aria-pressed', b.dataset.key === key ? 'true' : 'false'));
+  }
+
+  document.querySelectorAll('.seg').forEach(b =>
+    b.addEventListener('click', () => render(b.dataset.key)));
+
+  render('ab');
+</script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!--
+  ============================================================================
+  ASTRUS SUBMISSION SUMMARY — ROUND 5 · "BOLD BOXES"  (evolves Round-4 "Bold Compact")
+  ----------------------------------------------------------------------------
+  Tyler's Round-5 direction: keep the Round-4 Bold Compact skeleton — tight bars,
+  one row per line of business, a final bar literally named "Submission" (replaces
+  the old "Clearance" title) — BUT render every field as a bordered colored BOX
+  (green / amber / red by status) like Round-4 "Field Boxes". Each box packs a bold
+  status glyph + tiny uppercase label + bold value. Bigger/bolder type and more
+  saturated colors than Line Boxes, but tighter spacing so the whole card stays short.
+  Bold + compact + boxed.
+
+  LWC: c-astrus-submission-summary, top of the Quality tab. getRecord + Apex
+  getSummary() -> [{lob, geo[], carve?, kind?, fields:[{label,value,status}]}]
+  plus a "Submission" identity row of the same shape. Status: Present / Missing /
+  Partial — NEVER "received". No confidence %, reprocess, tabs, or dark mode.
+
+  Sample data = alliantinsurance--qa SUB 022667 (A & B Painting, Inc.) and
+  J.H. Lynch & Sons, Inc. Loss runs render PRESENT (green) on every line per live data.
+  Self-contained; LWS-safe (inline style + script + SVG, system fonts, no CDN/remote).
+  ============================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Astrus Submission Summary — Bold Boxes</title>
+<style>
+  :root {
+    --brand:#0176d3; --brand-dark:#032d60;
+    --ink:#141414; --text-2:#3a3a38; --muted:#5c5a58;
+    --border:#d5dae3; --surface:#ffffff; --recess:#f2f5f9; --canvas:#e9edf3;
+    /* saturated status colors */
+    --ok:#137333;   --ok-bg:#d6f4de;   --ok-bd:#2f9d4c;
+    --warn:#a8500a; --warn-bg:#ffe4b8; --warn-bd:#e89a34;
+    --miss:#be1b1b; --miss-bg:#fbd2d0; --miss-bd:#e4514d;
+    --geo:#0b3d78;  --geo-bg:#dcecfb;  --geo-bd:#9cc8f0;
+    --shadow-card:0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.10);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body { font-family:var(--font); color:var(--ink); background:var(--canvas); line-height:1.32; -webkit-font-smoothing:antialiased; padding:40px 24px 64px; font-variant-numeric:tabular-nums; }
+  .stage { max-width:860px; margin:0 auto; }
+  .stage-note { font-size:0.75rem; color:var(--muted); margin:0 0 16px 2px; }
+  .stage-note strong { color:var(--text-2); font-weight:700; }
+
+  /* submission toggle */
+  .toggle { display:inline-flex; gap:0; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:3px; margin:0 0 14px; box-shadow:0 1px 2px rgba(0,0,0,0.05); }
+  .toggle button { font-family:inherit; font-size:0.8125rem; font-weight:800; letter-spacing:-0.01em; color:var(--muted); background:transparent; border:0; border-radius:6px; padding:7px 15px; cursor:pointer; }
+  .toggle button:hover { color:var(--text-2); }
+  .toggle button[aria-pressed="true"] { color:#fff; background:var(--brand); }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-card); overflow:hidden; }
+  .head { padding:18px 22px 14px; border-bottom:2px solid var(--border); }
+  .eyebrow { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:0.75rem; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+  .eyebrow:empty { display:none; }
+  .eyebrow .sub { color:var(--brand-dark); }
+  .eyebrow .pill { text-transform:none; letter-spacing:0; font-weight:700; color:var(--text-2); background:var(--recess); border:1px solid var(--border); border-radius:100px; padding:2px 10px; font-size:0.6875rem; }
+  .eyebrow .d { width:3px; height:3px; border-radius:50%; background:#b9bdc7; }
+  .applicant { font-size:1.4375rem; line-height:1.1; font-weight:800; letter-spacing:-0.02em; margin:0; }
+  .subline { margin-top:5px; font-size:0.8125rem; font-weight:600; color:var(--text-2); }
+
+  .rows { padding:4px 0 8px; }
+  .row { display:grid; grid-template-columns:176px 1fr; gap:14px; align-items:start; padding:10px 22px; }
+  .row + .row { border-top:1px solid var(--border); }
+  .row.identity { background:linear-gradient(90deg,#eaf3fc 0%, #fff 62%); }
+  .row.identity .row-name { color:var(--brand-dark); }
+  .row-id { padding-top:3px; }
+  .row-name { font-size:0.9375rem; font-weight:800; letter-spacing:-0.01em; }
+  .row-boxes { margin-top:5px; display:flex; flex-wrap:wrap; gap:4px; }
+  .geo { font-size:0.625rem; font-weight:800; letter-spacing:0.03em; color:var(--geo); background:var(--geo-bg); border:1px solid var(--geo-bd); border-radius:4px; padding:1px 6px; }
+  .kind { font-size:0.625rem; font-weight:700; color:var(--muted); background:var(--recess); border:1px solid var(--border); border-radius:4px; padding:1px 6px; }
+
+  /* the bordered colored field boxes — bold + compact */
+  .fields { display:flex; flex-wrap:wrap; gap:6px; }
+  .fc { display:inline-flex; align-items:center; gap:7px; border:2px solid; border-radius:8px; padding:5px 10px 5px 8px; }
+  .fc .ic { width:17px; height:17px; flex:none; }
+  .fc .txt { display:flex; flex-direction:column; line-height:1.1; }
+  .fc .lab { font-size:0.625rem; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; }
+  .fc .val { font-size:0.9375rem; font-weight:800; letter-spacing:-0.01em; color:var(--ink); }
+  .fc .val .cur { font-size:0.8125rem; }
+  .fc.ok   { background:var(--ok-bg);   border-color:var(--ok-bd); }
+  .fc.ok   .lab { color:var(--ok); }
+  .fc.warn { background:var(--warn-bg); border-color:var(--warn-bd); }
+  .fc.warn .lab { color:var(--warn); } .fc.warn .val { color:var(--warn); font-size:0.8125rem; }
+  .fc.miss { background:var(--miss-bg); border-color:var(--miss-bd); }
+  .fc.miss .lab { color:var(--miss); } .fc.miss .val { color:var(--miss); font-size:0.8125rem; }
+
+  .legend { display:flex; flex-wrap:wrap; gap:10px 16px; padding:11px 22px 16px; border-top:2px solid var(--border); background:var(--recess); }
+  .lg { display:inline-flex; align-items:center; gap:7px; font-size:0.75rem; font-weight:700; color:var(--text-2); }
+  .lg .ic { width:16px; height:16px; }
+  .lg.note { color:var(--muted); font-weight:600; }
+
+  @media (max-width:640px) {
+    body { padding:18px 10px 40px; }
+    .row { grid-template-columns:1fr; gap:8px; }
+    .applicant { font-size:1.25rem; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <p class="stage-note"><strong>Round 5 — Bold Boxes.</strong> The Round-4 Bold Compact skeleton — tight bars, one per line of business, a final "Submission" bar — with every field rendered as a bold bordered <em>green / amber / red</em> box. Bigger, bolder, saturated; still short.</p>
+
+  <div class="toggle" role="group" aria-label="Choose submission">
+    <button type="button" id="btn-ab" aria-pressed="true" onclick="render('ab')">A &amp; B Painting</button>
+    <button type="button" id="btn-jhl" aria-pressed="false" onclick="render('jhl')">J.H. Lynch</button>
+  </div>
+
+  <article class="card" aria-label="Submission summary">
+    <header class="head">
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 class="applicant" id="applicant"></h1>
+      <div class="subline" id="subline"></div>
+    </header>
+    <div class="rows" id="rows"></div>
+    <div class="legend" role="note" aria-label="Legend">
+      <span class="lg"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Present</span>
+      <span class="lg"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8.5 15H1.5z" fill="var(--warn)"/><rect x="9.1" y="7.4" width="1.8" height="5" rx="0.9" fill="#fff"/><circle cx="10" cy="14.4" r="1" fill="#fff"/></svg>Partial</span>
+      <span class="lg"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>Missing</span>
+      <span class="lg note">Carve-outs (e.g. Hawaii Auto) show only when relevant · fields shown per LOB are a draft — correct me</span>
+    </div>
+  </article>
+</div>
+
+<script>
+const DATA = {
+  ab: {
+    header:{name:"A & B Painting, Inc.", sub:"SUB 022667", status:"Clearance Requested", tag:"New",
+      meta:"3 named insureds · R2 Solutions · Chubb · Place · ESIS · CA + HI · Eff 07/01/2026"},
+    lines:[
+      {lob:"Workers’ Compensation", geo:["CA"], fields:[
+        {label:"Payroll", value:"$4,928,350", status:"ok"},
+        {label:"Class codes", value:"Present", status:"ok"},
+        {label:"Experience mod", value:"Present", status:"ok"},
+        {label:"Loss runs", value:"$7.9M incurred", status:"ok"}]},
+      {lob:"General Liability", geo:["CA"], fields:[
+        {label:"Revenue", value:"$8,500,000", status:"ok"},
+        {label:"Loss runs", value:"$212K incurred", status:"ok"}]},
+      {lob:"Commercial Auto", geo:["CA"], fields:[
+        {label:"Vehicle schedule", value:"31 units", status:"ok"},
+        {label:"Garaging", value:"CA", status:"ok"},
+        {label:"Loss runs", value:"$606K incurred", status:"ok"}]},
+      {lob:"Commercial Auto", geo:["HI"], carve:"carve-out", fields:[
+        {label:"Vehicle schedule", value:"2 units", status:"ok"},
+        {label:"Loss runs", value:"Present", status:"ok"}]},
+      {lob:"Excess Liability", geo:["CA","HI"], fields:[
+        {label:"Underlying limits", value:"Present", status:"ok"},
+        {label:"Effective date", value:"Missing", status:"warn"},
+        {label:"Loss runs", value:"$0 incurred", status:"ok"}]},
+      {lob:"Submission", kind:"identity", fields:[
+        {label:"Revenue", value:"$8,500,000", status:"ok"},
+        {label:"NAICS", value:"238320", status:"ok"},
+        {label:"SIC", value:"1721", status:"ok"},
+        {label:"Effective date", value:"07/01/2026", status:"ok"},
+        {label:"FEIN", value:"Present", status:"ok"}]}
+    ]},
+  jhl: {
+    header:{name:"J.H. Lynch & Sons, Inc.", sub:"", status:"", tag:"",
+      meta:"Rhode Island · heavy highway construction & trucking · large fleet · R2 Solutions"},
+    lines:[
+      {lob:"Workers’ Compensation", geo:["RI"], fields:[
+        {label:"Payroll", value:"$17,770,000", status:"ok"},
+        {label:"Loss runs", value:"$29.0M · 821 claims", status:"ok"}]},
+      {lob:"General Liability", geo:["RI"], fields:[
+        {label:"Revenue", value:"$75,000,000", status:"ok"},
+        {label:"Loss runs", value:"$12.9M · 1,739 claims", status:"ok"}]},
+      {lob:"Commercial Auto", geo:["RI"], fields:[
+        {label:"Vehicle schedule", value:"249 units", status:"ok"},
+        {label:"Loss runs", value:"$40.0M · 3,797 claims", status:"ok"}]},
+      {lob:"Submission", kind:"identity", fields:[
+        {label:"Revenue", value:"$75,000,000", status:"ok"},
+        {label:"NAICS", value:"Present", status:"ok"},
+        {label:"SIC", value:"Present", status:"ok"},
+        {label:"Effective date", value:"Present", status:"ok"},
+        {label:"FEIN", value:"Present", status:"ok"}]}
+    ]}
+};
+
+const ICONS = {
+  ok:'<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  warn:'<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8.5 15H1.5z" fill="var(--warn)"/><rect x="9.1" y="7.4" width="1.8" height="5" rx="0.9" fill="#fff"/><circle cx="10" cy="14.4" r="1" fill="#fff"/></svg>',
+  miss:'<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>'
+};
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function valHtml(v){
+  const m = String(v).match(/^\$(.+)$/);
+  if (m) return '<span class="cur">$</span>' + esc(m[1]);
+  return esc(v);
+}
+
+function render(key){
+  const d = DATA[key];
+  document.getElementById('btn-ab').setAttribute('aria-pressed', key==='ab');
+  document.getElementById('btn-jhl').setAttribute('aria-pressed', key==='jhl');
+
+  const h = d.header;
+  let eye = '';
+  if (h.sub)    eye += '<span class="sub">'+esc(h.sub).replace(/ /g,'&nbsp;')+'</span>';
+  if (h.status){ if(eye) eye += '<span class="d"></span>'; eye += '<span class="pill">'+esc(h.status)+'</span>'; }
+  if (h.tag)   { if(eye) eye += '<span class="d"></span>'; eye += '<span>'+esc(h.tag)+'</span>'; }
+  document.getElementById('eyebrow').innerHTML = eye;
+  document.getElementById('applicant').textContent = h.name;
+  document.getElementById('subline').textContent = h.meta || '';
+
+  const rows = d.lines.map(function(line){
+    const identity = line.kind === 'identity';
+    let tags = '';
+    (line.geo||[]).forEach(function(g){ tags += '<span class="geo">'+esc(g)+'</span>'; });
+    if (line.carve) tags += '<span class="kind">'+esc(line.carve)+'</span>';
+
+    const fields = line.fields.map(function(f){
+      return '<span class="fc '+f.status+'">'+ICONS[f.status]+
+        '<span class="txt"><span class="lab">'+esc(f.label)+'</span>'+
+        '<span class="val">'+valHtml(f.value)+'</span></span></span>';
+    }).join('');
+
+    return '<div class="row'+(identity?' identity':'')+'">'+
+      '<div class="row-id"><div class="row-name">'+esc(line.lob)+'</div>'+
+      (tags?'<div class="row-boxes">'+tags+'</div>':'')+'</div>'+
+      '<div class="fields">'+fields+'</div></div>';
+  }).join('');
+  document.getElementById('rows').innerHTML = rows;
+}
+
+render('ab');
+</script>
+</body>
+</html>

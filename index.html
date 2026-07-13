@@ -3,16 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Astrus Submission Summary — Design Round 4</title>
+<title>Astrus Submission Summary</title>
 <style>
-  /* LIGHT MODE ONLY. No dark styling; no theme switching. */
+  /* LIGHT MODE ONLY. */
   :root {
     --brand:#0176d3; --brand-dark:#032d60;
     --ink:#181818; --text-2:#514f4d; --muted:#706e6b;
     --border:#e5e5e5; --surface:#ffffff; --recess:#fafaf9; --page-bg:#f3f3f3;
     --blue-tint:#e8f4fd; --blue-tint-bd:#c9e5f9;
-    --ok:#2e7d32; --ok-bg:#edf7ed; --warn:#a86403; --warn-bg:#fff8e1;
-    --miss:#ba0517; --miss-bg:#fef0f0; --miss-bd:#f5c0c0;
+    --ok:#2e7d32; --ok-bg:#edf7ed;
     --shadow:0 1px 3px rgba(0,0,0,0.08); --shadow-lg:0 8px 24px rgba(3,45,96,0.14);
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
@@ -23,37 +22,12 @@
   .breadcrumb { background:var(--brand-dark); color:#fff; font-size:0.8125rem; font-weight:600; padding:0.5rem 1.5rem; display:flex; align-items:center; gap:.5rem; }
   .breadcrumb .sep { opacity:.55; } .breadcrumb .home { opacity:.85; }
 
-  header.hero { background:linear-gradient(135deg,var(--brand-dark) 0%,#0b3d78 55%,var(--brand) 145%); color:#fff; padding:3rem 1.5rem 2.75rem; position:relative; overflow:hidden; }
-  header.hero::after { content:""; position:absolute; right:-80px; top:-90px; width:340px; height:340px; background:radial-gradient(circle,rgba(255,255,255,.10),transparent 70%); pointer-events:none; }
+  header.hero { background:linear-gradient(135deg,var(--brand-dark) 0%,#0b3d78 55%,var(--brand) 145%); color:#fff; padding:4rem 1.5rem 3.75rem; position:relative; overflow:hidden; }
+  header.hero::after { content:""; position:absolute; right:-80px; top:-90px; width:360px; height:360px; background:radial-gradient(circle,rgba(255,255,255,.10),transparent 70%); pointer-events:none; }
   .hero-inner { max-width:1200px; margin:0 auto; position:relative; z-index:1; }
-  .eyebrow { display:inline-block; font-size:0.75rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.28); padding:.3rem .7rem; border-radius:1rem; margin-bottom:1.15rem; }
-  header.hero h1 { margin:0 0 .8rem; font-size:clamp(1.9rem,3.8vw,2.9rem); font-weight:700; line-height:1.1; letter-spacing:-0.02em; max-width:20ch; }
-  header.hero p.lede { margin:0; font-size:clamp(1rem,1.4vw,1.15rem); max-width:80ch; color:rgba(255,255,255,.93); }
+  header.hero h1 { margin:0; font-size:clamp(2.1rem,4.4vw,3.25rem); font-weight:700; line-height:1.05; letter-spacing:-0.025em; }
 
-  main { max-width:1200px; margin:0 auto; padding:2.25rem 1.5rem 3rem; }
-
-  .sample { background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--brand); border-radius:0 8px 8px 0; box-shadow:var(--shadow); padding:1.25rem 1.4rem; margin-bottom:1.75rem; }
-  .sample h2 { margin:0 0 .8rem; font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
-  .sample .facts { display:flex; flex-wrap:wrap; gap:.55rem; }
-  .chip { display:inline-flex; align-items:center; gap:.4rem; font-size:.8125rem; font-weight:600; padding:.32rem .65rem; border-radius:1rem; background:var(--recess); color:var(--ink); border:1px solid var(--border); white-space:nowrap; font-variant-numeric:tabular-nums; }
-  .chip .dot { width:.55rem; height:.55rem; border-radius:50%; flex:none; background:var(--brand); }
-  .chip.green { background:var(--ok-bg); border-color:color-mix(in srgb,var(--ok) 35%,var(--border)); color:#1c531f; }
-  .chip.amber { background:var(--warn-bg); border-color:color-mix(in srgb,var(--warn) 40%,var(--border)); color:#7a4a02; }
-  .chip.red { background:var(--miss-bg); border-color:var(--miss-bd); color:#8a0311; }
-  .chip.green .dot { background:var(--ok); } .chip.amber .dot { background:var(--warn); } .chip.red .dot { background:var(--miss); }
-
-  .intro { margin-bottom:2rem; }
-  .intro p { margin:0 0 .85rem; max-width:84ch; color:var(--text-2); }
-  .intro strong { color:var(--brand-dark); }
-
-  .legend { display:flex; flex-wrap:wrap; gap:1rem 1.75rem; background:var(--recess); border:1px solid var(--border); border-radius:8px; padding:1rem 1.25rem; margin:1.25rem 0 0; font-size:.8125rem; }
-  .legend .li { display:flex; align-items:flex-start; gap:.55rem; max-width:38ch; }
-  .legend .sw { width:.85rem; height:.85rem; border-radius:3px; flex:none; margin-top:.15rem; }
-  .legend .sw.g { background:var(--ok); } .legend .sw.a { background:var(--warn); } .legend .sw.r { background:var(--miss); } .legend .sw.p { background:var(--brand-dark); }
-  .legend b { color:var(--ink); } .legend span.t { color:var(--muted); }
-
-  .section-label { font-size:1.375rem; font-weight:700; color:var(--ink); letter-spacing:-0.01em; margin:2.5rem 0 1.25rem; display:flex; align-items:center; gap:.75rem; }
-  .section-label::before { content:""; width:4px; height:1.5rem; background:var(--brand); border-radius:2px; }
+  main { max-width:1200px; margin:0 auto; padding:2.5rem 1.5rem 3rem; }
 
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:1.5rem; }
   .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); padding:1.5rem 1.5rem 1.35rem; display:flex; flex-direction:column; transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease; }
@@ -71,18 +45,15 @@
   .open-btn:hover { background:color-mix(in srgb,var(--brand) 82%,#000); }
   .open-btn:focus-visible { outline:2px solid var(--brand-dark); outline-offset:2px; }
 
-  .archive { margin-top:3.5rem; padding-top:1.75rem; border-top:1px solid var(--border); }
-  .archive + .archive { margin-top:2rem; padding-top:1.5rem; }
-  .archive h2 { font-size:.9375rem; font-weight:700; color:var(--muted); margin:0 0 .35rem; }
-  .archive p { font-size:.8125rem; color:var(--muted); margin:0 0 1rem; max-width:78ch; }
+  .archive { margin-top:2.5rem; padding-top:1.5rem; border-top:1px solid var(--border); }
+  .archive:first-of-type { margin-top:3.5rem; }
+  .archive h2 { font-size:.9375rem; font-weight:700; color:var(--muted); margin:0 0 .75rem; }
   .archive-list { display:flex; flex-wrap:wrap; gap:.6rem; }
   .archive-list a { font-size:.8125rem; font-weight:600; color:var(--text-2); text-decoration:none; background:var(--surface); border:1px solid var(--border); border-radius:1rem; padding:.38rem .85rem; transition:border-color .15s ease,color .15s ease; }
   .archive-list a:hover { border-color:var(--brand); color:var(--brand); }
-  .archive-list a .old { color:var(--muted); font-weight:400; }
 
   footer { max-width:1200px; margin:0 auto; padding:1.75rem 1.5rem 2.5rem; color:var(--muted); font-size:.8125rem; }
   footer strong { color:var(--brand-dark); }
-  footer code { background:var(--recess); border:1px solid var(--border); border-radius:3px; padding:0 .3em; font-size:.95em; }
 
   @media (max-width:720px) { .grid { grid-template-columns:1fr; } }
 </style>
@@ -90,136 +61,103 @@
 <body>
   <div class="breadcrumb">
     <span class="home">Astrus</span><span class="sep">›</span>
-    <span>Design Workshops</span><span class="sep">›</span>
-    <span>Submission Summary — Round 4</span>
+    <span>Submission Summary</span>
   </div>
 
   <header class="hero">
     <div class="hero-inner">
-      <span class="eyebrow">Design Round 4 · 3 close variations</span>
       <h1>Astrus Submission Summary</h1>
-      <p class="lede">Round 4 converges on the <strong>rows</strong> direction (Round-3 Concept 02) with Tyler's fixes: <strong>bolder</strong> red / green / yellow status, <strong>much less</strong> description, <strong>fields custom to each line of business</strong> (Commercial Auto shows its vehicle schedule + count, not loss history), and <strong>Clearance folded in as just another uniform row</strong>. Three close treatments of the same card so you can keep filtering. Buildable as a light-mode Lightning Web Component at the top of the Quality tab.</p>
     </div>
   </header>
 
   <main>
-    <section class="sample" aria-label="Shared sample submission">
-      <h2>Shared sample submission — every concept renders this</h2>
-      <div class="facts">
-        <span class="chip"><span class="dot"></span>A &amp; B Painting, Inc. · SUB 022667</span>
-        <span class="chip">3 named insureds · New · Clearance Requested</span>
-        <span class="chip">CA + HI · Broker R2 Solutions · Chubb · TPA ESIS</span>
-        <span class="chip green"><span class="dot"></span>WC payroll $4,928,350</span>
-        <span class="chip green"><span class="dot"></span>GL revenue $8,500,000 (incl. $1.05M sub)</span>
-        <span class="chip green"><span class="dot"></span>Commercial Auto — CA 31 · HI 2 power units</span>
-        <span class="chip amber"><span class="dot"></span>Excess Liability — Partial (no effective date)</span>
-        <span class="chip red"><span class="dot"></span>WC &amp; GL loss runs — Missing</span>
-      </div>
-    </section>
-
-    <section class="intro">
-      <p>Each concept is a single card of uniform rows — one per line of business, plus a Clearance row. Each row shows only the fields that <strong>matter to that line</strong>, as bold red / green / yellow status: Workers' Comp shows payroll + loss runs; GL shows revenue/sales + loss runs; Commercial Auto shows its <strong>vehicle schedule + count and loss runs</strong>; Excess shows the field holding it back. The per-line fields are now <strong>grounded in the live QA data model</strong> — e.g., loss history was put back on Commercial Auto because the data shows 1,146 loss-history summaries attach to Auto lines, refuting the earlier "auto has no loss history" guess. The two state carve-outs — <strong>Hawaii Commercial Auto</strong> and <strong>Connecticut GL</strong> — appear <strong>only when relevant</strong>; on this submission HI Auto shows (2 units) and CT GL does not. Standardized status, no freeform AI prose.</p>
-
-      <div class="legend" aria-label="Status legend">
-        <div class="li"><span class="sw g"></span><span><b>Present</b> — <span class="t">produced; the value is shown.</span></span></div>
-        <div class="li"><span class="sw a"></span><span><b>Partial</b> — <span class="t">produced, but one expected field is empty (no effective date on Excess).</span></span></div>
-        <div class="li"><span class="sw r"></span><span><b>Missing</b> — <span class="t">requested but nothing came back (WC &amp; GL loss runs).</span></span></div>
-        <div class="li"><span class="sw p"></span><span><b>Carve-outs</b> — <span class="t">Hawaii Auto &amp; Connecticut GL show only when relevant.</span></span></div>
-      </div>
-    </section>
-
-    <h2 class="section-label">The three concepts</h2>
     <div class="grid" id="grid"></div>
 
-    <section class="archive" aria-label="Round 3 archive">
-      <h2>Round 3 — superseded</h2>
-      <p>The six round-3 concepts, kept for reference. Feedback: right structure, but Clearance shouldn't be its own section, colors/text needed to be bolder, and the per-line fields should be custom to each LOB — so round 4 converges on the rows direction (Concept 02) with those fixes.</p>
+    <section class="archive" aria-label="Old round four concepts">
+      <h2>Old round four concepts</h2>
+      <div class="archive-list" id="archive-v4"></div>
+    </section>
+    <section class="archive" aria-label="Old round three concepts">
+      <h2>Old round three concepts</h2>
       <div class="archive-list" id="archive-v3"></div>
     </section>
-
-    <section class="archive" aria-label="Round 2 archive">
-      <h2>Round 2 — superseded</h2>
-      <p>The six round-2 concepts, kept for reference. Feedback from the workshop: they were over-designed dashboards; the brief is a standardized, at-a-glance checklist of what came in.</p>
+    <section class="archive" aria-label="Old round two concepts">
+      <h2>Old round two concepts</h2>
       <div class="archive-list" id="archive-v2"></div>
     </section>
-
-    <section class="archive" aria-label="Round 1 archive">
-      <h2>Round 1 — superseded</h2>
-      <p>The original six concepts. Round-2 feedback removed dark mode, extraction-confidence, reprocessing controls, and tabs — so these are archived, not featured.</p>
+    <section class="archive" aria-label="Old round one concepts">
+      <h2>Old round one concepts</h2>
       <div class="archive-list" id="archive-v1"></div>
     </section>
   </main>
 
   <footer>
-    <p>These are <strong>static HTML/CSS mockups</strong> of a future Lightning Web Component (<code>c-astrus-submission-summary</code>) pinned to the top of the Quality tab — hand-rolled to match SLDS tokens, type ladder, and status semantics, with no external frameworks, fonts, or CDNs. Data comes from <code>getRecord</code> + an Apex <code>getSummary()</code> returning per-LOB exposure/loss rows and clearance items. Light mode only. Sample data reflects the alliantinsurance--qa record SUB 022667.</p>
+    <p>Static HTML/CSS mockups of a light-mode Lightning Web Component (<strong>c-astrus-submission-summary</strong>) for the top of the Quality tab. Each concept renders live QA data for <strong>A &amp; B Painting, Inc. (SUB 022667)</strong> and <strong>J.H. Lynch &amp; Sons, Inc.</strong> — toggle between them inside each concept.</p>
   </footer>
 
 <script>
   const CONCEPTS = [
-    { n:"01", slug:"01-field-boxes.html", name:"Field Boxes",
-      thesis:"Each line of business is a row; the fields that matter to it are bold red / green / yellow boxes with just a label and value. Clearance is another row. Leans into the little state boxes you liked.",
-      job:"Bold boxes — what's here, what's not, per line." },
-    { n:"02", slug:"02-present-lines.html", name:"Present Lines",
-      thesis:"The same rows, but each field reads as an explicit status line: a bold check / X, the field, its value, and the word Present / Missing (the treatment you liked on the old Concept 05).",
-      job:"Say Present / Missing out loud on every field." },
-    { n:"03", slug:"03-bold-compact.html", name:"Bold Compact",
-      thesis:"The densest, boldest take — a filled status checkbox (green check / red X / amber !) per field, tight bars, almost no prose. Takes the least height at the top of the tab.",
-      job:"As bold and tight as it gets." },
+    { n:"01", slug:"01-line-boxes.html", name:"Line Boxes",
+      thesis:"Each line of business is a row of bold, bordered status boxes — one per field, more fields per line. The boxes-everywhere read, with status right on each field.",
+      job:"Boxes for everything — scan the colors down the card." },
+    { n:"02", slug:"02-bold-boxes.html", name:"Bold Boxes",
+      thesis:"The densest, boldest take — tight bars, saturated green/amber/red boxes. The version that takes the least height at the top of the tab.",
+      job:"Bold and compact." },
+    { n:"03", slug:"03-lead-status.html", name:"Lead Status",
+      thesis:"Status leads each field on the left — the Present/Missing marker sits right next to the value, so your eye never travels to a far-right pill.",
+      job:"Read status → field → value, no eye-travel." },
+    { n:"04", slug:"04-coverage-rail.html", name:"Coverage Rail",
+      thesis:"A bold health rail runs down the left of each line — green, amber, or red from its worst field — so you sweep the whole card and see which lines are clean in one glance.",
+      job:"Which lines are clean, which need attention?" },
   ];
 
+  const ARCHIVE_V4 = [
+    { slug:"01-field-boxes.html", name:"Field Boxes" },
+    { slug:"02-present-lines.html", name:"Present Lines" },
+    { slug:"03-bold-compact.html", name:"Bold Compact" },
+  ];
   const ARCHIVE_V3 = [
-    { slug:"01-coverage-tiles.html",  name:"Coverage Tiles" },
-    { slug:"02-coverage-rows.html",   name:"Coverage Rows" },
-    { slug:"03-compact-grid.html",    name:"Compact Grid" },
-    { slug:"04-status-chips.html",    name:"Status Chips" },
-    { slug:"05-flat-ledger.html",     name:"Flat Ledger" },
-    { slug:"06-mini-tiles.html",      name:"Mini-Tiles" },
+    { slug:"01-coverage-tiles.html", name:"Coverage Tiles" },
+    { slug:"02-coverage-rows.html", name:"Coverage Rows" },
+    { slug:"03-compact-grid.html", name:"Compact Grid" },
+    { slug:"04-status-chips.html", name:"Status Chips" },
+    { slug:"05-flat-ledger.html", name:"Flat Ledger" },
+    { slug:"06-mini-tiles.html", name:"Mini-Tiles" },
   ];
-
   const ARCHIVE_V2 = [
     { slug:"01-coverage-status-board.html", name:"Coverage Status Board" },
-    { slug:"02-executive-hero.html",        name:"Executive Hero" },
-    { slug:"03-exposure-first.html",        name:"Exposure-First" },
+    { slug:"02-executive-hero.html", name:"Executive Hero" },
+    { slug:"03-exposure-first.html", name:"Exposure-First" },
     { slug:"04-underwriter-datasheet.html", name:"Underwriter Datasheet" },
     { slug:"05-priority-signal-cards.html", name:"Priority Signal Cards" },
-    { slug:"06-coverage-map.html",          name:"Coverage Map" },
+    { slug:"06-coverage-map.html", name:"Coverage Map" },
   ];
-
   const ARCHIVE_V1 = [
-    { slug:"01-command-center.html",       name:"Command Center" },
-    { slug:"02-underwriter-brief.html",    name:"Underwriter Brief" },
+    { slug:"01-command-center.html", name:"Command Center" },
+    { slug:"02-underwriter-brief.html", name:"Underwriter Brief" },
     { slug:"03-triage-traffic-light.html", name:"Triage Traffic-Light" },
-    { slug:"04-tabbed-deep-dive.html",     name:"Tabbed Deep-Dive" },
-    { slug:"05-timeline-story.html",       name:"Timeline / Story" },
-    { slug:"06-split-ledger.html",         name:"Split Ledger" },
+    { slug:"04-tabbed-deep-dive.html", name:"Tabbed Deep-Dive" },
+    { slug:"05-timeline-story.html", name:"Timeline / Story" },
+    { slug:"06-split-ledger.html", name:"Split Ledger" },
   ];
 
   document.getElementById("grid").innerHTML = CONCEPTS.map(c => `
     <article class="card">
-      <div class="card-top">
-        <div class="num">${c.n}</div>
-        <h3>${c.name}</h3>
-      </div>
+      <div class="card-top"><div class="num">${c.n}</div><h3>${c.name}</h3></div>
       <p class="thesis">${c.thesis}</p>
       <p class="job"><b>Who it's for</b>${c.job}</p>
       <div class="card-footer">
-        <span class="badge-feas"><span class="dot"></span>LWC-feasible · light-mode</span>
+        <span class="badge-feas"><span class="dot"></span>A&amp;B &harr; J.H. Lynch</span>
         <a class="open-btn" href="concepts/${c.slug}">Open concept &rarr;</a>
       </div>
-    </article>
-  `).join("");
+    </article>`).join("");
 
-  document.getElementById("archive-v3").innerHTML = ARCHIVE_V3.map(a => `
-    <a href="concepts/v3/${a.slug}">${a.name} <span class="old">· v3</span></a>
-  `).join("");
-
-  document.getElementById("archive-v2").innerHTML = ARCHIVE_V2.map(a => `
-    <a href="concepts/v2/${a.slug}">${a.name} <span class="old">· v2</span></a>
-  `).join("");
-
-  document.getElementById("archive-v1").innerHTML = ARCHIVE_V1.map(a => `
-    <a href="concepts/v1/${a.slug}">${a.name} <span class="old">· v1</span></a>
-  `).join("");
+  const arch = (id, dir, arr) => document.getElementById(id).innerHTML =
+    arr.map(a => `<a href="concepts/${dir}/${a.slug}">${a.name}</a>`).join("");
+  arch("archive-v4","v4",ARCHIVE_V4);
+  arch("archive-v3","v3",ARCHIVE_V3);
+  arch("archive-v2","v2",ARCHIVE_V2);
+  arch("archive-v1","v1",ARCHIVE_V1);
 </script>
 </body>
 </html>
