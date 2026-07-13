@@ -5,15 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Astrus Submission Summary</title>
 <style>
-  /* LIGHT MODE ONLY. */
   :root {
     --brand:#0176d3; --brand-dark:#032d60;
     --ink:#181818; --text-2:#514f4d; --muted:#706e6b;
-    --border:#e5e5e5; --surface:#ffffff; --recess:#fafaf9; --page-bg:#f3f3f3;
+    --border:#e5e5e5; --surface:#ffffff; --page-bg:#f3f3f3;
     --blue-tint:#e8f4fd; --blue-tint-bd:#c9e5f9;
-    --ok:#2e7d32; --ok-bg:#edf7ed;
     --shadow:0 1px 3px rgba(0,0,0,0.08); --shadow-lg:0 8px 24px rgba(3,45,96,0.14);
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   }
   * { box-sizing:border-box; }
   html { -webkit-text-size-adjust:100%; }
@@ -27,35 +26,19 @@
   .hero-inner { max-width:1200px; margin:0 auto; position:relative; z-index:1; }
   header.hero h1 { margin:0; font-size:clamp(2.1rem,4.4vw,3.25rem); font-weight:700; line-height:1.05; letter-spacing:-0.025em; }
 
-  main { max-width:1200px; margin:0 auto; padding:2.5rem 1.5rem 3rem; }
+  main { max-width:1200px; margin:0 auto; padding:2.5rem 1.5rem 3.5rem; }
 
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:1.5rem; }
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); padding:1.5rem 1.5rem 1.35rem; display:flex; flex-direction:column; transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.25rem; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); padding:1.35rem 1.4rem 1.25rem; display:flex; flex-direction:column; transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease; }
   .card:hover { transform:translateY(-4px); box-shadow:var(--shadow-lg); border-color:color-mix(in srgb,var(--brand) 45%,var(--border)); }
-  .card-top { display:flex; align-items:center; gap:.8rem; margin-bottom:.9rem; }
-  .num { flex:none; width:2.5rem; height:2.5rem; border-radius:8px; background:var(--blue-tint); color:var(--brand-dark); font-weight:700; font-size:1.05rem; display:flex; align-items:center; justify-content:center; font-variant-numeric:tabular-nums; }
-  .card h3 { margin:0; font-size:1.375rem; font-weight:700; color:var(--ink); line-height:1.15; letter-spacing:-0.01em; }
-  .thesis { font-size:.9375rem; margin:0 0 1rem; color:var(--text-2); line-height:1.55; }
-  .job { font-size:.8125rem; color:var(--text-2); background:var(--recess); border-left:3px solid var(--blue-tint-bd); border-radius:0 6px 6px 0; padding:.6rem .8rem; margin:0 0 1.1rem; }
-  .job b { color:var(--muted); text-transform:uppercase; font-size:.6875rem; letter-spacing:.05em; font-weight:600; display:block; margin-bottom:.25rem; }
-  .card-footer { margin-top:auto; display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
-  .badge-feas { font-size:.75rem; font-weight:600; color:var(--ok); display:inline-flex; align-items:center; gap:.4rem; background:var(--ok-bg); border:1px solid color-mix(in srgb,var(--ok) 30%,var(--border)); padding:.3rem .6rem; border-radius:1rem; }
-  .badge-feas .dot { width:.5rem; height:.5rem; border-radius:50%; background:var(--ok); }
-  .open-btn { display:inline-flex; align-items:center; gap:.45rem; background:var(--brand); color:#fff; text-decoration:none; font-weight:700; font-size:.875rem; padding:.58rem 1.05rem; border-radius:6px; transition:background .15s ease; }
+  .serial { font-family:var(--mono); font-size:.75rem; font-weight:600; letter-spacing:.08em; color:var(--muted); margin-bottom:.55rem; }
+  .card h3 { margin:0 0 .5rem; font-size:1.1875rem; font-weight:700; color:var(--ink); line-height:1.2; letter-spacing:-0.01em; }
+  .desc { font-size:.875rem; margin:0 0 1.1rem; color:var(--text-2); line-height:1.5; }
+  .open-btn { margin-top:auto; align-self:flex-start; display:inline-flex; align-items:center; gap:.45rem; background:var(--brand); color:#fff; text-decoration:none; font-weight:700; font-size:.8125rem; padding:.52rem .95rem; border-radius:6px; transition:background .15s ease; }
   .open-btn:hover { background:color-mix(in srgb,var(--brand) 82%,#000); }
   .open-btn:focus-visible { outline:2px solid var(--brand-dark); outline-offset:2px; }
 
-  .archive { margin-top:2.5rem; padding-top:1.5rem; border-top:1px solid var(--border); }
-  .archive:first-of-type { margin-top:3.5rem; }
-  .archive h2 { font-size:.9375rem; font-weight:700; color:var(--muted); margin:0 0 .75rem; }
-  .archive-list { display:flex; flex-wrap:wrap; gap:.6rem; }
-  .archive-list a { font-size:.8125rem; font-weight:600; color:var(--text-2); text-decoration:none; background:var(--surface); border:1px solid var(--border); border-radius:1rem; padding:.38rem .85rem; transition:border-color .15s ease,color .15s ease; }
-  .archive-list a:hover { border-color:var(--brand); color:var(--brand); }
-
-  footer { max-width:1200px; margin:0 auto; padding:1.75rem 1.5rem 2.5rem; color:var(--muted); font-size:.8125rem; }
-  footer strong { color:var(--brand-dark); }
-
-  @media (max-width:720px) { .grid { grid-template-columns:1fr; } }
+  @media (max-width:640px) { .grid { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -72,92 +55,45 @@
 
   <main>
     <div class="grid" id="grid"></div>
-
-    <section class="archive" aria-label="Old round four concepts">
-      <h2>Old round four concepts</h2>
-      <div class="archive-list" id="archive-v4"></div>
-    </section>
-    <section class="archive" aria-label="Old round three concepts">
-      <h2>Old round three concepts</h2>
-      <div class="archive-list" id="archive-v3"></div>
-    </section>
-    <section class="archive" aria-label="Old round two concepts">
-      <h2>Old round two concepts</h2>
-      <div class="archive-list" id="archive-v2"></div>
-    </section>
-    <section class="archive" aria-label="Old round one concepts">
-      <h2>Old round one concepts</h2>
-      <div class="archive-list" id="archive-v1"></div>
-    </section>
   </main>
 
-  <footer>
-    <p>Static HTML/CSS mockups of a light-mode Lightning Web Component (<strong>c-astrus-submission-summary</strong>) for the top of the Quality tab. Each concept renders live QA data for <strong>A &amp; B Painting, Inc. (SUB 022667)</strong> and <strong>J.H. Lynch &amp; Sons, Inc.</strong> — toggle between them inside each concept.</p>
-  </footer>
-
 <script>
+  // Every concept, flat and equal. Serial codes (not 1-2-3) so none reads as "the best".
   const CONCEPTS = [
-    { n:"01", slug:"01-line-boxes.html", name:"Line Boxes",
-      thesis:"Each line of business is a row of bold, bordered status boxes — one per field, more fields per line. The boxes-everywhere read, with status right on each field.",
-      job:"Boxes for everything — scan the colors down the card." },
-    { n:"02", slug:"02-bold-boxes.html", name:"Bold Boxes",
-      thesis:"The densest, boldest take — tight bars, saturated green/amber/red boxes. The version that takes the least height at the top of the tab.",
-      job:"Bold and compact." },
-    { n:"03", slug:"03-lead-status.html", name:"Lead Status",
-      thesis:"Status leads each field on the left — the Present/Missing marker sits right next to the value, so your eye never travels to a far-right pill.",
-      job:"Read status → field → value, no eye-travel." },
-    { n:"04", slug:"04-coverage-rail.html", name:"Coverage Rail",
-      thesis:"A bold health rail runs down the left of each line — green, amber, or red from its worst field — so you sweep the whole card and see which lines are clean in one glance.",
-      job:"Which lines are clean, which need attention?" },
-  ];
-
-  const ARCHIVE_V4 = [
-    { slug:"01-field-boxes.html", name:"Field Boxes" },
-    { slug:"02-present-lines.html", name:"Present Lines" },
-    { slug:"03-bold-compact.html", name:"Bold Compact" },
-  ];
-  const ARCHIVE_V3 = [
-    { slug:"01-coverage-tiles.html", name:"Coverage Tiles" },
-    { slug:"02-coverage-rows.html", name:"Coverage Rows" },
-    { slug:"03-compact-grid.html", name:"Compact Grid" },
-    { slug:"04-status-chips.html", name:"Status Chips" },
-    { slug:"05-flat-ledger.html", name:"Flat Ledger" },
-    { slug:"06-mini-tiles.html", name:"Mini-Tiles" },
-  ];
-  const ARCHIVE_V2 = [
-    { slug:"01-coverage-status-board.html", name:"Coverage Status Board" },
-    { slug:"02-executive-hero.html", name:"Executive Hero" },
-    { slug:"03-exposure-first.html", name:"Exposure-First" },
-    { slug:"04-underwriter-datasheet.html", name:"Underwriter Datasheet" },
-    { slug:"05-priority-signal-cards.html", name:"Priority Signal Cards" },
-    { slug:"06-coverage-map.html", name:"Coverage Map" },
-  ];
-  const ARCHIVE_V1 = [
-    { slug:"01-command-center.html", name:"Command Center" },
-    { slug:"02-underwriter-brief.html", name:"Underwriter Brief" },
-    { slug:"03-triage-traffic-light.html", name:"Triage Traffic-Light" },
-    { slug:"04-tabbed-deep-dive.html", name:"Tabbed Deep-Dive" },
-    { slug:"05-timeline-story.html", name:"Timeline / Story" },
-    { slug:"06-split-ledger.html", name:"Split Ledger" },
+    { s:"4817", name:"Line Boxes",           href:"concepts/01-line-boxes.html",        desc:"Each line as a row of bold, bordered status boxes — one per field." },
+    { s:"2093", name:"Bold Boxes",           href:"concepts/02-bold-boxes.html",        desc:"Densest, boldest — tight bars of saturated green / amber / red boxes." },
+    { s:"7641", name:"Lead Status",          href:"concepts/03-lead-status.html",       desc:"Status leads each field on the left — no eye-travel to a far-right pill." },
+    { s:"3358", name:"Coverage Rail",        href:"concepts/04-coverage-rail.html",     desc:"A bold health rail down the left of each line, colored by its worst field." },
+    { s:"5129", name:"Field Boxes",          href:"concepts/v4/01-field-boxes.html",    desc:"Rows of colored field boxes; the clearance items folded in as one more row." },
+    { s:"8402", name:"Present Lines",        href:"concepts/v4/02-present-lines.html",  desc:"Each field a status line reading Present / Missing." },
+    { s:"1746", name:"Bold Compact",         href:"concepts/v4/03-bold-compact.html",   desc:"Tight bars with a filled status checkbox per field." },
+    { s:"6220", name:"Coverage Tiles",       href:"concepts/v3/01-coverage-tiles.html", desc:"Per-line tiles with Exposure and Loss-history sub-tiles inside." },
+    { s:"9051", name:"Coverage Rows",        href:"concepts/v3/02-coverage-rows.html",  desc:"Single-column line-of-business rows with sub-tiles on the right." },
+    { s:"3487", name:"Compact Grid",         href:"concepts/v3/03-compact-grid.html",   desc:"Dense grid of mini-tiles with sub-tiles stacked." },
+    { s:"7013", name:"Status Chips",         href:"concepts/v3/04-status-chips.html",   desc:"Status-forward; exposure and loss as pill chips." },
+    { s:"2665", name:"Flat Ledger",          href:"concepts/v3/05-flat-ledger.html",    desc:"Flat, hairline, with figures aligned in columns." },
+    { s:"8890", name:"Mini-Tiles",           href:"concepts/v3/06-mini-tiles.html",     desc:"Every value its own small bordered mini-tile." },
+    { s:"4471", name:"Coverage Status Board",href:"concepts/v2/01-coverage-status-board.html", desc:"Per-line traffic-light coverage board." },
+    { s:"1928", name:"Executive Hero",       href:"concepts/v2/02-executive-hero.html", desc:"Big applicant hero with headline coverage." },
+    { s:"5563", name:"Exposure-First",       href:"concepts/v2/03-exposure-first.html", desc:"Leads with the exposures and the money." },
+    { s:"7284", name:"Underwriter Datasheet",href:"concepts/v2/04-underwriter-datasheet.html", desc:"Dense definition-list brief." },
+    { s:"3096", name:"Priority Signal Cards",href:"concepts/v2/05-priority-signal-cards.html", desc:"Priority-ranked signal cards." },
+    { s:"6157", name:"Coverage Map",         href:"concepts/v2/06-coverage-map.html",   desc:"State × line-of-business coverage map." },
+    { s:"2810", name:"Command Center",       href:"concepts/v1/01-command-center.html", desc:"KPI-tile command center." },
+    { s:"9342", name:"Underwriter Brief",    href:"concepts/v1/02-underwriter-brief.html", desc:"Deterministic templated brief." },
+    { s:"4605", name:"Triage Traffic-Light", href:"concepts/v1/03-triage-traffic-light.html", desc:"Red / amber / green present-missing checklist." },
+    { s:"1173", name:"Tabbed Deep-Dive",     href:"concepts/v1/04-tabbed-deep-dive.html", desc:"Tabbed deep-dive layout." },
+    { s:"8038", name:"Timeline / Story",     href:"concepts/v1/05-timeline-story.html", desc:"Submission-status timeline." },
+    { s:"5726", name:"Split Ledger",         href:"concepts/v1/06-split-ledger.html",   desc:"Value vs source-confidence ledger." },
   ];
 
   document.getElementById("grid").innerHTML = CONCEPTS.map(c => `
     <article class="card">
-      <div class="card-top"><div class="num">${c.n}</div><h3>${c.name}</h3></div>
-      <p class="thesis">${c.thesis}</p>
-      <p class="job"><b>Who it's for</b>${c.job}</p>
-      <div class="card-footer">
-        <span class="badge-feas"><span class="dot"></span>A&amp;B &harr; J.H. Lynch</span>
-        <a class="open-btn" href="concepts/${c.slug}">Open concept &rarr;</a>
-      </div>
+      <div class="serial">CONCEPT ${c.s}</div>
+      <h3>${c.name}</h3>
+      <p class="desc">${c.desc}</p>
+      <a class="open-btn" href="${c.href}">Open concept &rarr;</a>
     </article>`).join("");
-
-  const arch = (id, dir, arr) => document.getElementById(id).innerHTML =
-    arr.map(a => `<a href="concepts/${dir}/${a.slug}">${a.name}</a>`).join("");
-  arch("archive-v4","v4",ARCHIVE_V4);
-  arch("archive-v3","v3",ARCHIVE_V3);
-  arch("archive-v2","v2",ARCHIVE_V2);
-  arch("archive-v1","v1",ARCHIVE_V1);
 </script>
 </body>
 </html>
