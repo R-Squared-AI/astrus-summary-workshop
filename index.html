@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Astrus Submission Summary — Design Round 3</title>
+<title>Astrus Submission Summary — Design Round 4</title>
 <style>
   /* LIGHT MODE ONLY. No dark styling; no theme switching. */
   :root {
@@ -91,14 +91,14 @@
   <div class="breadcrumb">
     <span class="home">Astrus</span><span class="sep">›</span>
     <span>Design Workshops</span><span class="sep">›</span>
-    <span>Submission Summary — Round 3</span>
+    <span>Submission Summary — Round 4</span>
   </div>
 
   <header class="hero">
     <div class="hero-inner">
-      <span class="eyebrow">Design Round 3 · 6 close variations</span>
+      <span class="eyebrow">Design Round 4 · 3 close variations</span>
       <h1>Astrus Submission Summary</h1>
-      <p class="lede">Six close variations on one idea from the <strong>Jul-13 Underwriter-Controlled Reprocessing workshop</strong>: a standardized card pinned to the top of the Quality tab that an underwriter reads in <strong>one glance</strong> — line of business by line of business, <strong>are the exposures here (how many, how much) and are the loss runs here</strong> — plus the <strong>clearance essentials</strong> (revenue, NAICS, SIC). Same submission, same data, same structure in all six; they differ only in layout, so you can filter to the treatment that feels right. Each is buildable as a light-mode Lightning Web Component.</p>
+      <p class="lede">Round 4 converges on the <strong>rows</strong> direction (Round-3 Concept 02) with Tyler's fixes: <strong>bolder</strong> red / green / yellow status, <strong>much less</strong> description, <strong>fields custom to each line of business</strong> (Commercial Auto shows its vehicle schedule + count, not loss history), and <strong>Clearance folded in as just another uniform row</strong>. Three close treatments of the same card so you can keep filtering. Buildable as a light-mode Lightning Web Component at the top of the Quality tab.</p>
     </div>
   </header>
 
@@ -113,27 +113,33 @@
         <span class="chip green"><span class="dot"></span>GL revenue $8,500,000 (incl. $1.05M sub)</span>
         <span class="chip green"><span class="dot"></span>Commercial Auto — CA 31 · HI 2 power units</span>
         <span class="chip amber"><span class="dot"></span>Excess Liability — Partial (no effective date)</span>
-        <span class="chip red"><span class="dot"></span>Loss runs — Not produced</span>
+        <span class="chip red"><span class="dot"></span>WC &amp; GL loss runs — Missing</span>
       </div>
     </section>
 
     <section class="intro">
-      <p>Every concept answers the underwriter's first questions before they open the file: <strong>which lines of business came in, is each line's exposure present (how many, and what's the total), and are the loss runs here?</strong> The organizing unit is the <strong>line of business</strong> — under each one, sub-tiles give a present / count / total read for <strong>exposure</strong> and for <strong>loss history</strong>. A <strong>clearance tile</strong> carries the rest of what's needed to clear (revenue, NAICS, SIC, effective date, primary state). The two state carve-outs — <strong>Hawaii Commercial Auto</strong> and <strong>Connecticut GL</strong> — appear <strong>only when relevant</strong>; on this submission HI Auto shows (2 Hawaii units) and CT GL does not. Standardized checkbox-style status, no freeform AI prose — so the card reads the same way every time. All six are one card (not a dashboard), light mode only.</p>
+      <p>Each concept is a single card of uniform rows — one per line of business, plus a Clearance row. Each row shows only the fields that <strong>matter to that line</strong>, as bold red / green / yellow status: Workers' Comp and GL show their exposure and their loss runs; Commercial Auto shows its <strong>vehicle schedule and count</strong> (no loss history); Excess shows the one field holding it back. The two state carve-outs — <strong>Hawaii Commercial Auto</strong> and <strong>Connecticut GL</strong> — appear <strong>only when relevant</strong>; on this submission HI Auto shows (2 units) and CT GL does not. Standardized status, no freeform AI prose. <strong>The specific fields shown per line of business are a first draft</strong> — there are LOB-specific underwriting rules still to pin down, so tell me what to add, cut, or re-color.</p>
 
       <div class="legend" aria-label="Status legend">
-        <div class="li"><span class="sw g"></span><span><b>Present</b> — <span class="t">the item was produced; the value is shown (payroll, revenue, a vehicle count, a code).</span></span></div>
-        <div class="li"><span class="sw a"></span><span><b>Partial</b> — <span class="t">produced, but one expected field is verifiably empty (here, no effective date on Excess).</span></span></div>
-        <div class="li"><span class="sw r"></span><span><b>Not produced</b> — <span class="t">requested on the submission but nothing came back (here, every line's loss runs).</span></span></div>
+        <div class="li"><span class="sw g"></span><span><b>Present</b> — <span class="t">produced; the value is shown.</span></span></div>
+        <div class="li"><span class="sw a"></span><span><b>Partial</b> — <span class="t">produced, but one expected field is empty (no effective date on Excess).</span></span></div>
+        <div class="li"><span class="sw r"></span><span><b>Missing</b> — <span class="t">requested but nothing came back (WC &amp; GL loss runs).</span></span></div>
         <div class="li"><span class="sw p"></span><span><b>Carve-outs</b> — <span class="t">Hawaii Auto &amp; Connecticut GL show only when relevant.</span></span></div>
       </div>
     </section>
 
-    <h2 class="section-label">The six concepts</h2>
+    <h2 class="section-label">The three concepts</h2>
     <div class="grid" id="grid"></div>
+
+    <section class="archive" aria-label="Round 3 archive">
+      <h2>Round 3 — superseded</h2>
+      <p>The six round-3 concepts, kept for reference. Feedback: right structure, but Clearance shouldn't be its own section, colors/text needed to be bolder, and the per-line fields should be custom to each LOB — so round 4 converges on the rows direction (Concept 02) with those fixes.</p>
+      <div class="archive-list" id="archive-v3"></div>
+    </section>
 
     <section class="archive" aria-label="Round 2 archive">
       <h2>Round 2 — superseded</h2>
-      <p>The six round-2 concepts, kept for reference. Feedback from the workshop: they were over-designed dashboards; the brief is a standardized, at-a-glance checklist of what came in — so round 3 rebuilds around per-LOB exposure + loss-history sub-tiles and a clearance tile.</p>
+      <p>The six round-2 concepts, kept for reference. Feedback from the workshop: they were over-designed dashboards; the brief is a standardized, at-a-glance checklist of what came in.</p>
       <div class="archive-list" id="archive-v2"></div>
     </section>
 
@@ -150,24 +156,24 @@
 
 <script>
   const CONCEPTS = [
-    { n:"01", slug:"01-coverage-tiles.html", name:"Coverage Tiles",
-      thesis:"The literal read of the brief: each line of business is a tile, and inside sit two sub-tiles — an Exposure sub-tile (present · count · total) and a Loss-history sub-tile. A clearance tile below carries revenue, NAICS, and SIC.",
-      job:"Line by line — are the exposures and loss runs here?" },
-    { n:"02", slug:"02-coverage-rows.html", name:"Coverage Rows",
-      thesis:"The same content as a single-column checklist. Each line of business is a full-width row — name and status on the left, the exposure and loss-history sub-tiles on the right — so you scan straight down the card.",
-      job:"Walk the lines top to bottom." },
-    { n:"03", slug:"03-compact-grid.html", name:"Compact Grid",
-      thesis:"A denser take: a tight grid of mini-tiles with the exposure and loss sub-tiles stacked vertically inside each. The version that takes the least height at the top of the tab.",
-      job:"Keep it tight — I want it small at the top." },
-    { n:"04", slug:"04-status-chips.html", name:"Status Chips",
-      thesis:"Status-forward. Each line leads with a big Present / Partial glyph and word, with the exposures and loss runs shown as compact present·count·total pill chips beneath — the green/red scan dominates.",
-      job:"Show me green and red first, detail second." },
-    { n:"05", slug:"05-flat-ledger.html", name:"Flat Ledger",
-      thesis:"The quietest, most precise sibling — flat surfaces, hairline rules, no gradients. Exposure and loss figures line up in aligned columns down the card, like a refined underwriting ledger.",
-      job:"Give me the numbers, lined up." },
-    { n:"06", slug:"06-mini-tiles.html", name:"Mini-Tiles",
-      thesis:"The most literal tile-in-tile. Every exposure, loss run, and clearance item is its own small bordered mini-tile with a corner check (or a red X when missing) — the nesting is unmistakable.",
-      job:"Make each present / missing item its own little tile." },
+    { n:"01", slug:"01-field-boxes.html", name:"Field Boxes",
+      thesis:"Each line of business is a row; the fields that matter to it are bold red / green / yellow boxes with just a label and value. Clearance is another row. Leans into the little state boxes you liked.",
+      job:"Bold boxes — what's here, what's not, per line." },
+    { n:"02", slug:"02-present-lines.html", name:"Present Lines",
+      thesis:"The same rows, but each field reads as an explicit status line: a bold check / X, the field, its value, and the word Present / Missing (the treatment you liked on the old Concept 05).",
+      job:"Say Present / Missing out loud on every field." },
+    { n:"03", slug:"03-bold-compact.html", name:"Bold Compact",
+      thesis:"The densest, boldest take — a filled status checkbox (green check / red X / amber !) per field, tight bars, almost no prose. Takes the least height at the top of the tab.",
+      job:"As bold and tight as it gets." },
+  ];
+
+  const ARCHIVE_V3 = [
+    { slug:"01-coverage-tiles.html",  name:"Coverage Tiles" },
+    { slug:"02-coverage-rows.html",   name:"Coverage Rows" },
+    { slug:"03-compact-grid.html",    name:"Compact Grid" },
+    { slug:"04-status-chips.html",    name:"Status Chips" },
+    { slug:"05-flat-ledger.html",     name:"Flat Ledger" },
+    { slug:"06-mini-tiles.html",      name:"Mini-Tiles" },
   ];
 
   const ARCHIVE_V2 = [
@@ -201,6 +207,10 @@
         <a class="open-btn" href="concepts/${c.slug}">Open concept &rarr;</a>
       </div>
     </article>
+  `).join("");
+
+  document.getElementById("archive-v3").innerHTML = ARCHIVE_V3.map(a => `
+    <a href="concepts/v3/${a.slug}">${a.name} <span class="old">· v3</span></a>
   `).join("");
 
   document.getElementById("archive-v2").innerHTML = ARCHIVE_V2.map(a => `
