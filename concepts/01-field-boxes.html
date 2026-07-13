@@ -10,8 +10,8 @@
       just a red / green / yellow status box with its value. No big subtitles.
     • Per-LOB fields are CUSTOM to what's relevant to that line, not a uniform
       exposure+loss on every row:
-        - Commercial Auto  -> vehicle schedule + COUNT; NO loss history (Tyler: "loss
-          history doesn't really matter on commercial auto").
+        - Commercial Auto  -> vehicle schedule + COUNT + loss history (live QA data
+          refutes the earlier guess: 1,146 loss-history summaries attach to CA LOBs).
         - Workers' Comp / GL -> exposure + loss runs (loss runs matter here).
         - Excess -> the one field holding it back (effective date).
     • Keeps the little state boxes (CA / HI) he likes, and the explicit "Present"
@@ -162,6 +162,9 @@
           <span class="fc ok">
             <svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="txt"><span class="lab">Vehicle schedule</span><span class="val">31 units</span></span></span>
+          <span class="fc miss">
+            <svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
+          <span class="txt"><span class="lab">Loss runs</span><span class="val">Missing</span></span></span>
         </div>
       </div>
 
@@ -175,6 +178,9 @@
           <span class="fc ok">
             <svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="txt"><span class="lab">Vehicle schedule</span><span class="val">2 units</span></span></span>
+          <span class="fc miss">
+            <svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
+          <span class="txt"><span class="lab">Loss runs</span><span class="val">Missing</span></span></span>
         </div>
       </div>
 

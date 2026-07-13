@@ -6,8 +6,8 @@
   read as explicit STATUS LINES — a bold check / X / triangle, the field, its value,
   and the word "Present" / "Missing" (the treatment Tyler liked on Round-3 Concept 05).
   Clearance is just another uniform row. Bolder colors, bolder text, minimal prose.
-  Per-LOB fields are CUSTOM (Commercial Auto = vehicle schedule + count, NO loss history;
-  WC/GL = exposure + loss runs). Per-LOB field choices are a best-guess draft to correct.
+  Per-LOB fields are CUSTOM (Commercial Auto = vehicle schedule + count + loss history;
+  WC/GL = exposure + loss runs). Live QA data confirms CA carries loss history (1,146 summaries).
   LWC: c-astrus-submission-summary, top of Quality tab. Present / Missing / Partial;
   never "received"; no confidence/reprocess/tabs/dark-mode. Sample = SUB 022667. LWS-safe.
   ============================================================================
@@ -120,6 +120,7 @@
         <div><div class="row-name">Commercial Auto</div><div class="row-boxes"><span class="geo">CA</span></div></div>
         <div class="lines">
           <div class="ln ok"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lab">Vehicle schedule</span><span class="val">31 units</span><span class="word">Present</span></div>
+          <div class="ln miss"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg><span class="lab">Loss runs</span><span class="val">&mdash;</span><span class="word">Missing</span></div>
         </div>
       </div>
 
@@ -128,6 +129,7 @@
         <div><div class="row-name">Commercial Auto</div><div class="row-boxes"><span class="geo">HI</span><span class="kind">carve-out</span></div></div>
         <div class="lines">
           <div class="ln ok"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lab">Vehicle schedule</span><span class="val">2 units</span><span class="word">Present</span></div>
+          <div class="ln miss"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--miss)"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg><span class="lab">Loss runs</span><span class="val">&mdash;</span><span class="word">Missing</span></div>
         </div>
       </div>
 
