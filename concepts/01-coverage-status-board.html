@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<!--
+====================================================================================================
+ CONCEPT 01 — "COVERAGE STATUS BOARD"      (ROUND 2 · flagship · the per-LOB "boom boom boom")
+ Astrus Submission Summary · A & B Painting, Inc. · SUB 022667
+====================================================================================================
+ THESIS: The evolved per-line-of-business status board. Each LOB is a status card
+   (Produced / Partial / Not produced) with its key exposure figure baked in as the proof, a
+   plain-words legend, and the loss-run "Not produced" flag surfaced as a submission-level chip.
+   Pure visual summary. LIGHT MODE ONLY.
+
+ LWC MAPPING (this mockup maps 1:1 to a real Lightning Web Component):
+   • Component      : c-astrus-coverage-status-board   (pinned to top of the Submission record page)
+   • Shell          : lightning-card  (title slot = applicant identity; body = status board)
+   • Identity/header: @wire getRecord(Astrus_Submission__c) → Name, Named_Insured__c,
+                      Number_of_Named_Insureds__c, New_Renewal__c, Status__c, Description_of_Ops__c.
+   • LOB rows       : imperative Apex @wire (getCoverageBoard) returns the standardized per-LOB rows
+                      {lob, state, exposureLabel, exposureValue, status} — status derived SERVER-SIDE
+                      (Produced = exposure field populated / child schedule exists; Partial = LOB present
+                      but a named field verifiably null e.g. Effective_Date__c; Not produced = all null).
+   • Loss-run chip  : derived from Loss_Run_Valuation_Date__c (null ⇒ "Not produced").
+   • Base comps     : lightning-card, lightning-badge, lightning-pill, lightning-icon,
+                      lightning-formatted-number / -formatted-date-time. SLDS left-border styling hook
+                      (slds-border_left + brand token) drives the accent rail. Inline SVG for status icons.
+   • Feasibility    : LOW build risk. No 3rd-party libs, no CDN/fonts, LWS-safe, light-mode SLDS only.
+                      NO dark mode · NO confidence · NO reprocessing · NO tabs (per shared spec §0).
+====================================================================================================
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coverage Status Board · SUB 022667 · A & B Painting, Inc.</title>
+<style>
+/* ============================ DESIGN TOKENS (SHARED-SPEC-V2 §4) ================================= */
+:root{
+  --brand:#0176d3; --brand-dark:#032d60;
+  --ink:#181818; --text-2:#514f4d; --muted:#706e6b;
+  --border:#e5e5e5; --border-2:#dddbda;
+  --surface:#ffffff; --recess:#fafaf9;
+  --blue-tint:#e8f4fd; --blue-tint-bd:#c9e5f9;
+
+  --produced:#2e7d32;  --produced-bg:#edf7ed;  --produced-bd:#bfe0c0;
+  --partial:#a86403;   --partial-bg:#fff8e1;   --partial-bd:#f3dfa2;
+  --notprod:#ba0517;   --notprod-bg:#fef0f0;   --notprod-bd:#f5c0c0;
+  --na:#706e6b;        --na-bg:#f3f3f3;
+
+  --shadow:0 1px 3px rgba(0,0,0,.08);
+  --shadow-lift:0 4px 14px rgba(0,0,0,.10);
+  --radius:8px; --radius-sm:4px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--font);background:#f3f3f3;color:var(--ink);
+  line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+
+/* ============================ FAUX LIGHTNING CHROME (context only) ============================== */
+.lp-chrome{background:var(--brand-dark);color:#fff;padding:10px 20px;font-size:.8125rem;
+  display:flex;align-items:center;gap:10px;}
+.lp-chrome .waffle{opacity:.8;flex:none}
+.lp-crumb{opacity:.92;letter-spacing:.01em}
+.lp-crumb b{opacity:1;font-weight:700}
+
+.canvas{max-width:1080px;margin:0 auto;padding:24px 16px 48px;}
+@media(max-width:600px){.canvas{padding:16px 8px 32px}}
+
+/* ============================ CARD SHELL ======================================================== */
+.board{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;}
+
+/* ---- HEADER / P0 — WHO (the anchor) ---- */
+.hd{display:flex;align-items:flex-start;gap:16px;padding:32px 32px 24px;
+  background:linear-gradient(180deg,#f7fbff 0%,var(--surface) 78%);
+  border-bottom:1px solid var(--border);}
+@media(max-width:600px){.hd{padding:24px 20px 20px}}
+.hd-badge{flex:none;width:44px;height:44px;border-radius:var(--radius);
+  background:var(--blue-tint);border:1px solid var(--blue-tint-bd);
+  display:flex;align-items:center;justify-content:center;color:var(--brand);margin-top:4px;}
+.hd-badge svg{width:24px;height:24px}
+.hd-main{min-width:0;flex:1}
+.applicant{font-size:2.75rem;font-weight:700;letter-spacing:-.02em;color:var(--ink);
+  margin:0;line-height:1.05;}
+@media(max-width:600px){.applicant{font-size:2rem}}
+.eyebrow{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
+.hd-eyebrow{margin:0 0 6px}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:14px;
+  font-size:.875rem;font-weight:500;color:var(--text-2);}
+.meta .sep{color:var(--border-2);font-weight:400}
+.meta .k{color:var(--muted);font-weight:600}
+.chip-new{display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;
+  background:var(--blue-tint);border:1px solid var(--blue-tint-bd);color:var(--brand-dark);
+  font-size:.75rem;font-weight:700;letter-spacing:.02em;}
+.status-now{display:inline-flex;align-items:center;gap:6px;font-size:.8125rem;font-weight:600;color:var(--text-2)}
+.status-now .pulse{width:8px;height:8px;border-radius:50%;background:var(--brand);
+  box-shadow:0 0 0 3px rgba(1,118,211,.16);}
+.ops{margin:14px 0 0;font-size:.875rem;color:var(--text-2);max-width:64ch;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ni-line{margin:8px 0 0;font-size:.8125rem;color:var(--muted);}
+.ni-line b{color:var(--text-2);font-weight:600}
+
+/* ---- LOSS-RUN CHIP / P4 — the star missing flag (POPS) ---- */
+.lossflag{display:flex;align-items:center;gap:14px;margin:20px 32px 0;padding:14px 18px;
+  background:var(--notprod-bg);border:1px solid var(--notprod-bd);
+  border-left:4px solid var(--notprod);border-radius:0 var(--radius) var(--radius) 0;}
+@media(max-width:600px){.lossflag{margin:16px 20px 0}}
+.lossflag .lf-ico{flex:none;width:26px;height:26px;color:var(--notprod)}
+.lossflag .lf-txt{min-width:0}
+.lossflag .lf-title{font-size:1rem;font-weight:700;color:var(--notprod);letter-spacing:-.005em;
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.lossflag .lf-title .lf-state{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;
+  color:#fff;background:var(--notprod);padding:2px 8px;border-radius:var(--radius-sm);}
+.lossflag .lf-sub{font-size:.8125rem;color:var(--text-2);margin-top:3px;font-weight:500}
+
+/* ============================ P1 — LINES OF BUSINESS (the centerpiece) ========================== */
+.section{padding:24px 32px 8px}
+@media(max-width:600px){.section{padding:20px 20px 4px}}
+.section-hd{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.section-title{font-size:1.375rem;font-weight:700;color:var(--ink);margin:0;letter-spacing:-.01em}
+.section-count{font-size:.8125rem;font-weight:600;color:var(--muted)}
+/* honest micro-viz: slim per-status split of the 5 LOBs (§5, the one allowed micro-viz) */
+.split{display:flex;align-items:center;gap:12px;margin-left:auto;min-width:220px;flex:1;max-width:340px}
+.split-bar{flex:1;height:8px;border-radius:999px;overflow:hidden;display:flex;
+  background:var(--na-bg);border:1px solid var(--border);}
+.split-bar span{display:block;height:100%}
+.split-bar .sp-green{background:var(--produced)}
+.split-bar .sp-amber{background:var(--partial)}
+.split-key{font-size:.75rem;font-weight:600;color:var(--muted);white-space:nowrap}
+
+/* LOB card grid */
+.lob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:860px){.lob-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.lob-grid{grid-template-columns:1fr}}
+
+.lob{position:relative;display:flex;flex-direction:column;min-height:150px;
+  background:var(--surface);border:1px solid var(--border);
+  border-left:4px solid var(--na);border-radius:0 var(--radius) var(--radius) 0;
+  padding:16px 18px;transition:box-shadow .16s ease,transform .16s ease;}
+.lob:hover{box-shadow:var(--shadow-lift);transform:translateY(-1px)}
+.lob.produced{border-left-color:var(--produced);background:linear-gradient(90deg,var(--produced-bg),var(--surface) 60%)}
+.lob.partial{border-left-color:var(--partial);background:linear-gradient(90deg,var(--partial-bg),var(--surface) 60%)}
+.lob.notprod{border-left-color:var(--notprod);background:linear-gradient(90deg,var(--notprod-bg),var(--surface) 60%)}
+
+.lob-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.lob-name{font-size:1rem;font-weight:700;color:var(--ink);margin:0;line-height:1.25;letter-spacing:-.005em}
+.state-chip{flex:none;font-size:.6875rem;font-weight:800;letter-spacing:.04em;color:var(--text-2);
+  background:var(--recess);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:2px 7px;text-transform:uppercase;white-space:nowrap;}
+.state-chip.multi{color:var(--brand-dark);background:var(--blue-tint);border-color:var(--blue-tint-bd)}
+
+.lob-exp{margin-top:auto;padding-top:14px}
+.lob-exp .eyebrow{display:block;margin-bottom:4px}
+.lob-exp .val{font-size:1.75rem;font-weight:700;color:var(--ink);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;line-height:1;}
+.lob-exp .val .unit{font-size:.9375rem;font-weight:600;color:var(--text-2);letter-spacing:0;margin-left:5px}
+.lob-exp .val.na{font-size:1rem;font-weight:600;color:var(--partial);letter-spacing:0;line-height:1.3}
+.lob-exp .subnote{font-size:.75rem;color:var(--muted);margin-top:5px;line-height:1.4}
+
+/* status token — color + icon + text, ALWAYS (§5/§7) */
+.token{display:inline-flex;align-items:center;gap:6px;margin-top:14px;align-self:flex-start;
+  font-size:.75rem;font-weight:700;letter-spacing:.01em;padding:3px 10px 3px 7px;border-radius:999px;border:1px solid;}
+.token svg{width:14px;height:14px;flex:none}
+.token.produced{color:var(--produced);background:var(--produced-bg);border-color:var(--produced-bd)}
+.token.partial{color:var(--partial);background:var(--partial-bg);border-color:var(--partial-bd)}
+.token.notprod{color:var(--notprod);background:var(--notprod-bg);border-color:var(--notprod-bd)}
+
+/* ============================ LEGEND (persistent, plain-words §7) =============================== */
+.legend{margin:20px 32px 0;padding:16px 20px;background:var(--recess);border:1px solid var(--border);
+  border-radius:var(--radius);}
+@media(max-width:600px){.legend{margin:16px 20px 0}}
+.legend-hd{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:12px}
+.legend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:720px){.legend-grid{grid-template-columns:1fr}}
+.legend-item{display:flex;gap:10px;align-items:flex-start}
+.legend-item .lg-ico{flex:none;width:20px;height:20px;margin-top:1px}
+.legend-item .lg-ico.produced{color:var(--produced)}
+.legend-item .lg-ico.partial{color:var(--partial)}
+.legend-item .lg-ico.notprod{color:var(--notprod)}
+.legend-item .lg-word{font-size:.8125rem;font-weight:700;color:var(--ink)}
+.legend-item .lg-def{font-size:.75rem;color:var(--text-2);line-height:1.45;margin-top:2px}
+
+/* ============================ P5 — SUPPORTING CONTEXT (quiet definition grid) =================== */
+.context{margin:24px 0 0;padding:20px 32px 28px;border-top:1px solid var(--border);background:var(--surface)}
+@media(max-width:600px){.context{padding:20px 20px 24px}}
+.context .eyebrow{margin-bottom:14px}
+.ctx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2px 24px;margin:0}
+.ctx-grid > div{padding:10px 0;border-top:1px solid var(--border)}
+.ctx-grid dt{font-size:.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.ctx-grid dd{margin:3px 0 0;font-size:.875rem;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.ctx-grid dd .link{color:var(--brand);font-weight:600;text-decoration:none}
+.ctx-grid dd .link:hover{text-decoration:underline}
+
+/* ============================ FOOTER NOTE (mockup meta, not part of component) ================== */
+.note{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:20px 24px;margin-top:20px;}
+.note h2{margin:0 0 6px;font-size:1.125rem;font-weight:700;color:var(--brand-dark);
+  padding-left:10px;border-left:4px solid var(--brand)}
+.note p{margin:6px 0 0;font-size:.875rem;color:var(--text-2)}
+.note code{background:var(--recess);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:1px 5px;font-size:.8125rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+</style>
+
+<!-- ============================ FAUX LIGHTNING TOP BAR (context only) ============================ -->
+<div class="lp-chrome">
+  <svg class="waffle" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+    <circle cx="3" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/><circle cx="13" cy="3" r="1.4"/>
+    <circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/>
+    <circle cx="3" cy="13" r="1.4"/><circle cx="8" cy="13" r="1.4"/><circle cx="13" cy="13" r="1.4"/>
+  </svg>
+  <span class="lp-crumb">Astrus Submission&nbsp;&nbsp;›&nbsp;&nbsp;<b>SUB 022667</b></span>
+</div>
+
+<div class="canvas">
+<article class="board" aria-labelledby="applicant">
+
+  <!-- ============ HEADER · P0 — WHO ============ -->
+  <header class="hd">
+    <span class="hd-badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 3 6.5V11c0 5 3.8 9.2 9 11 5.2-1.8 9-6 9-11V6.5L12 2Zm0 2.2 7 3.5V11c0 3.9-2.9 7.3-7 8.9-4.1-1.6-7-5-7-8.9V7.7l7-3.5Z"/></svg>
+    </span>
+    <div class="hd-main">
+      <p class="eyebrow hd-eyebrow">Submission Summary · Named Insured</p>
+      <h1 class="applicant" id="applicant">A&nbsp;&amp;&nbsp;B Painting, Inc.</h1>
+      <div class="meta">
+        <span class="chip-new">New Business</span>
+        <span class="sep">•</span>
+        <span><span class="k">3</span> named insureds</span>
+        <span class="sep">•</span>
+        <span><span class="k">SUB</span> 022667</span>
+        <span class="sep">•</span>
+        <span class="status-now"><span class="pulse" aria-hidden="true"></span>Clearance Requested</span>
+      </div>
+      <p class="ops" title="Painting and wall-covering services for commercial and public projects; works as a subcontractor under competitive-bid/fixed-price contracts; greater Northern California; union workforce.">
+        Painting and wall-covering services for commercial and public projects; works as a subcontractor under competitive-bid/fixed-price contracts; greater Northern California; union workforce.
+      </p>
+      <p class="ni-line">Also insured: <b>A &amp; B Painting West, Inc.</b> · <b>ACR Commercial Drywall, Inc.</b> — all Artisan Contractor</p>
+    </div>
+  </header>
+
+  <!-- ============ LOSS-RUN FLAG · P4 — the star missing signal ============ -->
+  <div class="lossflag" role="status">
+    <svg class="lf-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20Zm1 15h-2v-2h2v2Zm0-4h-2V7h2v6Z"/></svg>
+    <div class="lf-txt">
+      <div class="lf-title">Loss runs <span class="lf-state">Not produced</span></div>
+      <div class="lf-sub">Requested on the submission, but no loss-run data was produced — no valuation date on record.</div>
+    </div>
+  </div>
+
+  <!-- ============ LINES OF BUSINESS · P1 / P2 / P3 — the centerpiece ============ -->
+  <section class="section" aria-labelledby="lobTitle">
+    <div class="section-hd">
+      <h2 class="section-title" id="lobTitle">Lines of Business</h2>
+      <span class="section-count">5 produced across CA &amp; HI</span>
+      <div class="split" aria-hidden="true">
+        <span class="split-bar" role="img" aria-label="4 of 5 lines produced, 1 partial">
+          <span class="sp-green" style="width:80%"></span>
+          <span class="sp-amber" style="width:20%"></span>
+        </span>
+        <span class="split-key">4 Produced · 1 Partial</span>
+      </div>
+    </div>
+
+    <div class="lob-grid">
+
+      <!-- 1 · Workers' Compensation -->
+      <article class="lob produced">
+        <div class="lob-top">
+          <h3 class="lob-name">Workers' Compensation</h3>
+          <span class="state-chip">CA</span>
+        </div>
+        <div class="token produced"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 5 12.2 3.6 13.6 9 19 20.4 7.6 19 6.2 9 16.2Z"/></svg>Produced</div>
+        <div class="lob-exp">
+          <span class="eyebrow">Payroll</span>
+          <span class="val">$4,928,350</span>
+        </div>
+      </article>
+
+      <!-- 2 · General Liability -->
+      <article class="lob produced">
+        <div class="lob-top">
+          <h3 class="lob-name">General Liability</h3>
+          <span class="state-chip">CA</span>
+        </div>
+        <div class="token produced"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 5 12.2 3.6 13.6 9 19 20.4 7.6 19 6.2 9 16.2Z"/></svg>Produced</div>
+        <div class="lob-exp">
+          <span class="eyebrow">Revenue</span>
+          <span class="val">$8,500,000</span>
+          <span class="subnote">Incl. $1,050,000 subcontracted (wall covering, specialty coatings, scaffolding)</span>
+        </div>
+      </article>
+
+      <!-- 3 · Commercial Auto — CA -->
+      <article class="lob produced">
+        <div class="lob-top">
+          <h3 class="lob-name">Commercial Auto</h3>
+          <span class="state-chip">CA</span>
+        </div>
+        <div class="token produced"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 5 12.2 3.6 13.6 9 19 20.4 7.6 19 6.2 9 16.2Z"/></svg>Produced</div>
+        <div class="lob-exp">
+          <span class="eyebrow">Vehicle schedule</span>
+          <span class="val">31<span class="unit">vehicles</span></span>
+        </div>
+      </article>
+
+      <!-- 4 · Commercial Auto — HI (separate LOB) -->
+      <article class="lob produced">
+        <div class="lob-top">
+          <h3 class="lob-name">Commercial Auto</h3>
+          <span class="state-chip">HI</span>
+        </div>
+        <div class="token produced"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 5 12.2 3.6 13.6 9 19 20.4 7.6 19 6.2 9 16.2Z"/></svg>Produced</div>
+        <div class="lob-exp">
+          <span class="eyebrow">Vehicle schedule</span>
+          <span class="val">2<span class="unit">vehicles</span></span>
+          <span class="subnote">Hawaii is a separate line — requires its own policy</span>
+        </div>
+      </article>
+
+      <!-- 5 · Excess Liability — Partial -->
+      <article class="lob partial">
+        <div class="lob-top">
+          <h3 class="lob-name">Excess Liability</h3>
+          <span class="state-chip multi">CA + HI</span>
+        </div>
+        <div class="token partial"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 1 21h22L12 2Zm1 15h-2v-2h2v2Zm0-4h-2V9h2v4Z"/></svg>Partial</div>
+        <div class="lob-exp">
+          <span class="eyebrow">Effective date</span>
+          <span class="val na">No effective date on record</span>
+          <span class="subnote">Line is produced; the effective-date field is empty</span>
+        </div>
+      </article>
+
+      <!-- spacer keeps a clean 3-col grid; empty non-card cell -->
+      <div aria-hidden="true"></div>
+
+    </div>
+  </section>
+
+  <!-- ============ LEGEND (persistent, plain words · §7) ============ -->
+  <div class="legend" aria-label="Status legend">
+    <div class="legend-hd">What the status means — did Astrus produce data for the line?</div>
+    <div class="legend-grid">
+      <div class="legend-item">
+        <svg class="lg-ico produced" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20Zm-1.2 14.6-4-4L8.2 11l2.6 2.6L15.8 8.6l1.4 1.4-6.4 6.6Z"/></svg>
+        <div><div class="lg-word">Produced</div><div class="lg-def">The line is present and its expected exposure was produced (WC payroll, GL revenue, Auto vehicle schedule).</div></div>
+      </div>
+      <div class="legend-item">
+        <svg class="lg-ico partial" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 1 21h22L12 2Zm1 15h-2v-2h2v2Zm0-4h-2V9h2v4Z"/></svg>
+        <div><div class="lg-word">Partial</div><div class="lg-def">The line was produced, but a specific expected field is verifiably empty (here: no effective date).</div></div>
+      </div>
+      <div class="legend-item">
+        <svg class="lg-ico notprod" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20Zm3.5 12.1-1.4 1.4L12 13.4l-2.1 2.1-1.4-1.4L10.6 12 8.5 9.9l1.4-1.4L12 10.6l2.1-2.1 1.4 1.4L13.4 12l2.1 2.1Z"/></svg>
+        <div><div class="lg-word">Not produced</div><div class="lg-def">Requested on the submission, but nothing came back — no exposure or schedule was produced for it.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SUPPORTING CONTEXT · P5 — quiet ============ -->
+  <section class="context" aria-labelledby="ctxTitle">
+    <p class="eyebrow" id="ctxTitle">Submission Context</p>
+    <dl class="ctx-grid">
+      <div><dt>Term</dt><dd>07/01/2026 – 07/01/2027</dd></div>
+      <div><dt>State(s)</dt><dd>CA · HI</dd></div>
+      <div><dt>Submitting broker</dt><dd>R2 Solutions</dd></div>
+      <div><dt>Carrier / market</dt><dd>Chubb <span style="color:var(--muted);font-weight:600">· Place</span></dd></div>
+      <div><dt>TPA</dt><dd>ESIS</dd></div>
+      <div><dt>Avg employment</dt><dd>50</dd></div>
+      <div><dt>Locations</dt><dd>Santa Clara, CA · San Francisco, CA</dd></div>
+      <div><dt>Total vehicles</dt><dd>33 (31 CA · 2 HI)</dd></div>
+    </dl>
+  </section>
+
+</article>
+
+<!-- ============ MOCKUP META (not part of the LWC) ============ -->
+<div class="note">
+  <h2>Concept 01 — Coverage Status Board</h2>
+  <p><b>Thesis:</b> the evolved per-line "boom boom boom" — every line of business is a status card
+  (Produced / Partial / Not produced) with its key exposure figure baked in as the proof it was produced,
+  a plain-words legend, and the loss-run "Not produced" flag surfaced as a submission-level chip that pops.</p>
+  <p><b>LWC:</b> <code>c-astrus-coverage-status-board</code> — <code>lightning-card</code> shell,
+  <code>getRecord</code> for identity, an imperative Apex <code>@wire</code> for the standardized per-LOB rows
+  (status derived server-side), SLDS left-border styling hook for the accent rail, inline SVG icons.
+  Light-mode SLDS only, LWS-safe, system fonts, fully self-contained — a pure visual summary.</p>
+</div>
+</div>

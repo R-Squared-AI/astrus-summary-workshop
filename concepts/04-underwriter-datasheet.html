@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<!--
+====================================================================================================
+ CONCEPT 04 — "UNDERWRITER DATASHEET"                         Astrus Submission Summary · Round 2
+====================================================================================================
+ THESIS: the "listed brief" made genuinely beautiful. A disciplined definition-grid of facts plus a
+ quiet vehicle-schedule table. Elegance comes from type / spacing / alignment restraint — hairlines,
+ not boxes; tabular numerals; generous air — NOT decoration.
+
+ PRIORITY EMPHASIS (SHARED-SPEC-V2 §6):
+   P0 WHO  = applicant name is the largest text (hero) + identity facts in the grid.
+   P4 LOSS = "Loss runs — Not produced" pops as a red accent-rail strip directly under the header.
+   P1/P2   = Lines of Business is the vivid centerpiece: each LOB a status row (color+icon+word)
+             with its key exposure figure baked in; a persistent plain-words legend defines colors.
+   P3      = Commercial Auto vehicle COUNT shown as a first-class fact in a quiet schedule table.
+   P5      = term / states / broker / carrier / TPA / locations stay quiet in the definition grid.
+
+ LWC MAPPING (this mockup maps 1:1 to a real Lightning Web Component):
+   • Component   : c-astrus-submission-datasheet
+   • Data in     : Lightning Data Service getRecord(Astrus_Submission__c) + getFieldValue for
+                   identity/term/broker/carrier/TPA/loss-run fields; imperative Apex @wire
+                   (getDatasheet) returns the deterministic per-LOB PRODUCED status rows + the
+                   vehicle counts by state (server-side, standardized — identical every time).
+   • Rendering   : lightning-card wrapper; semantic <dl> definition grid; lightning-datatable (or the
+                   styled <table> shown here) for the vehicle schedule; lightning-formatted-number /
+                   -currency / -date-time for values; lightning-icon (utility:check/warning/error)
+                   for status; lightning-badge/pill for chips. Left accent rail = SLDS styling hook.
+   • Status calc : Produced = exposure field populated (WC payroll, GL revenue, Auto schedule w/ N);
+                   Partial = present but a named expected field is verifiably empty (Excess: no
+                   Effective_Date__c); Not produced = exposure/schedule all null. Loss run = submission
+                   -level chip from Loss_Run_Valuation_Date__c null-check. No invented completeness.
+   • Feasibility : light-mode SLDS, inline SVG/CSS only, no external frameworks/CDNs/fonts, LWS-safe.
+   FORBIDDEN & ABSENT: no dark mode / theme toggle, no confidence %, no reprocessing controls, no tabs.
+====================================================================================================
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concept 04 — Underwriter Datasheet · SUB 022667</title>
+<style>
+/* ================= TOKENS (SHARED-SPEC-V2 §4 · LIGHT MODE ONLY) ================================= */
+:root{
+  --brand:#0176d3; --brand-dark:#032d60;
+  --ink:#181818; --text-2:#514f4d; --muted:#706e6b;
+  --border:#e5e5e5; --hair:#ebeae8; --surface:#ffffff; --recess:#fafaf9; --page:#f3f2f2;
+  --blue-tint:#e8f4fd; --blue-tint-bd:#c9e5f9;
+  --produced:#2e7d32; --produced-bg:#edf7ed;
+  --partial:#a86403;  --partial-bg:#fff8e1;
+  --notprod:#ba0517;  --notprod-bg:#fef0f0; --notprod-bd:#f5c0c0;
+  --na:#706e6b;       --na-bg:#f3f3f3;
+  --shadow:0 1px 3px rgba(0,0,0,.08); --shadow-lg:0 4px 14px rgba(0,0,0,.12);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--font);background:var(--page);color:var(--ink);line-height:1.5;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ================= FAUX LIGHTNING CHROME (light, minimal) ====================================== */
+.chrome{background:var(--surface);border-bottom:1px solid var(--border);padding:.55rem 1.25rem;
+  display:flex;align-items:center;gap:.6rem;font-size:.8125rem;color:var(--muted);
+  position:sticky;top:0;z-index:20;}
+.chrome .app{width:1.35rem;height:1.35rem;border-radius:.28rem;background:var(--brand);
+  display:inline-flex;align-items:center;justify-content:center;color:#fff;flex:none;}
+.chrome .app svg{width:.9rem;height:.9rem}
+.chrome .crumb{color:var(--muted)}
+.chrome .crumb b{color:var(--ink);font-weight:600}
+.chrome .sep{color:#c9c7c5}
+
+.canvas{max-width:1080px;margin:0 auto;padding:1.5rem 1.25rem 2.5rem;}
+@media(max-width:640px){.canvas{padding:1rem .75rem 2rem}}
+
+/* ================= CARD ======================================================================== */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  box-shadow:var(--shadow);overflow:hidden;}
+.card-body{padding:2rem;}
+@media(max-width:640px){.card-body{padding:1.25rem}}
+
+/* ================= HEADER (P0 — WHO) =========================================================== */
+.eyebrow{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);}
+.hd-eyebrow{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
+.hd-eyebrow .badge-ai{font-size:.625rem;font-weight:700;letter-spacing:.04em;color:var(--brand);
+  background:var(--blue-tint);border:1px solid var(--blue-tint-bd);border-radius:1rem;padding:.1rem .5rem;
+  text-transform:uppercase;}
+h1.applicant{font-size:2.75rem;line-height:1.05;font-weight:700;letter-spacing:-.02em;color:var(--ink);
+  margin:0;}
+@media(max-width:640px){h1.applicant{font-size:2rem}}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem;margin-top:.75rem;
+  font-size:.875rem;color:var(--text-2);font-weight:500;}
+.meta .dot{color:#c9c7c5}
+.meta .sub-id{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:600;
+  padding:.15rem .55rem;border-radius:1rem;border:1px solid;}
+.chip.new{color:var(--brand);border-color:var(--blue-tint-bd);background:var(--blue-tint)}
+.chip.stage{color:var(--text-2);border-color:var(--border);background:var(--recess)}
+.chip.stage .pdot{width:.45rem;height:.45rem;border-radius:50%;background:var(--brand)}
+
+/* ================= SECTION SCAFFOLD ============================================================ */
+.section{margin-top:2rem;}
+.section-hd{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
+  padding-bottom:.6rem;border-bottom:1px solid var(--border);margin-bottom:1.25rem;}
+.section-hd .s-title{font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+.section-hd .s-title::before{content:"";width:3px;height:.9rem;background:var(--brand);border-radius:2px;display:inline-block;}
+.section-hd .s-count{font-size:.75rem;font-weight:600;color:var(--muted);letter-spacing:.02em;}
+
+/* ================= LOSS-RUN FLAG (P4 — pops) =================================================== */
+.flag{display:flex;align-items:center;gap:.85rem;margin-top:1.5rem;padding:1rem 1.15rem;
+  background:var(--notprod-bg);border:1px solid var(--notprod-bd);border-left:4px solid var(--notprod);
+  border-radius:0 8px 8px 0;}
+.flag .ic{width:1.5rem;height:1.5rem;color:var(--notprod);flex:none}
+.flag .txt{flex:1;min-width:0}
+.flag .txt .t{font-size:.9375rem;font-weight:700;color:var(--notprod)}
+.flag .txt .c{font-size:.8125rem;color:var(--text-2);margin-top:.1rem}
+.flag .tag{font-size:.6875rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--muted);border:1px solid var(--border);background:var(--surface);border-radius:1rem;
+  padding:.2rem .55rem;white-space:nowrap;flex:none;}
+
+/* ================= DEFINITION GRID (P0/P5) ===================================================== */
+.defgrid{display:grid;grid-template-columns:1fr 1fr;column-gap:2.5rem;margin:0;}
+@media(max-width:680px){.defgrid{grid-template-columns:1fr;column-gap:0}}
+.def{padding:.85rem 0;border-bottom:1px solid var(--hair);}
+.def--wide{grid-column:1 / -1;}
+.def dt{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+  margin:0 0 .3rem;}
+.def dd{margin:0;font-size:.9375rem;font-weight:500;color:var(--ink);line-height:1.5;}
+.def dd .sub{color:var(--text-2);font-weight:400}
+.def dd.desc{font-weight:400;color:var(--text-2);max-width:62ch}
+.ni-list{list-style:none;margin:.4rem 0 0;padding:0;display:flex;flex-direction:column;gap:.25rem;}
+.ni-list li{font-size:.875rem;font-weight:500;color:var(--ink);display:flex;align-items:baseline;gap:.5rem;}
+.ni-list li .n{width:1.1rem;color:var(--muted);font-size:.75rem;font-variant-numeric:tabular-nums;flex:none}
+.ni-list li .role{color:var(--muted);font-weight:400;font-size:.75rem}
+.loc-list{list-style:none;margin:.35rem 0 0;padding:0;display:flex;flex-direction:column;gap:.25rem;}
+.loc-list li{font-size:.875rem;color:var(--ink);font-weight:500}
+.term-flow{display:inline-flex;align-items:center;gap:.5rem}
+.term-flow .arw{color:var(--muted)}
+.term-flow .len{font-size:.75rem;font-weight:600;color:var(--muted);background:var(--recess);
+  border:1px solid var(--border);border-radius:1rem;padding:.1rem .5rem;}
+
+/* ================= LINES OF BUSINESS (P1/P2 — centerpiece) ===================================== */
+.lob-list{display:flex;flex-direction:column;gap:.65rem;}
+.lob{display:grid;grid-template-columns:1.6rem 1fr auto;align-items:center;gap:1rem;
+  padding:.95rem 1.15rem;border:1px solid var(--border);border-left-width:4px;border-radius:0 8px 8px 0;
+  background:var(--surface);}
+.lob.produced{border-left-color:var(--produced);background:linear-gradient(90deg,var(--produced-bg),var(--surface) 44%)}
+.lob.partial{border-left-color:var(--partial);background:linear-gradient(90deg,var(--partial-bg),var(--surface) 44%)}
+.lob .stat-ic{width:1.35rem;height:1.35rem;flex:none}
+.lob.produced .stat-ic{color:var(--produced)} .lob.partial .stat-ic{color:var(--partial)}
+.lob .who .name{font-size:1rem;font-weight:700;color:var(--ink);line-height:1.2}
+.lob .who .name .st{font-weight:500;color:var(--muted);font-size:.8125rem;margin-left:.15rem}
+.lob .who .status-word{display:inline-flex;align-items:center;gap:.3rem;font-size:.75rem;font-weight:700;
+  letter-spacing:.03em;margin-top:.3rem;}
+.lob.produced .status-word{color:var(--produced)} .lob.partial .status-word{color:var(--partial)}
+.lob .who .subnote{font-size:.75rem;color:var(--text-2);margin-top:.2rem;font-weight:400}
+.lob .expo{text-align:right;white-space:nowrap}
+.lob .expo .lbl{font-size:.6875rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.lob .expo .val{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;color:var(--ink);line-height:1.1;
+  font-variant-numeric:tabular-nums;margin-top:.1rem;}
+.lob .expo .val .u{font-size:.8125rem;font-weight:600;color:var(--muted);letter-spacing:0;margin-left:.15rem}
+.lob.partial .expo .val{font-size:.9375rem;color:var(--partial);font-weight:700;letter-spacing:0;max-width:16ch;white-space:normal}
+@media(max-width:560px){
+  .lob{grid-template-columns:1.4rem 1fr;grid-template-rows:auto auto;}
+  .lob .expo{grid-column:1 / -1;text-align:left;margin-top:.4rem;padding-left:0}
+  .lob .expo .val{font-size:1.25rem}
+}
+
+/* legend */
+.legend{margin-top:1rem;padding:1rem 1.15rem;background:var(--recess);border:1px solid var(--border);
+  border-radius:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem 1.5rem;}
+@media(max-width:680px){.legend{grid-template-columns:1fr}}
+.legend .li{display:flex;gap:.6rem;align-items:flex-start}
+.legend .swatch{width:.85rem;height:.85rem;border-radius:.2rem;flex:none;margin-top:.15rem;border:1px solid rgba(0,0,0,.08)}
+.legend .swatch.g{background:var(--produced)} .legend .swatch.a{background:var(--partial)} .legend .swatch.r{background:var(--notprod)}
+.legend .lt{font-size:.75rem;line-height:1.45}
+.legend .lt b{font-weight:700;color:var(--ink)} .legend .lt span{color:var(--text-2)}
+
+/* ================= VEHICLE SCHEDULE (P3 — quiet table) ========================================= */
+.vtable-wrap{border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+table.vtable{width:100%;border-collapse:collapse;font-size:.875rem;}
+table.vtable thead th{background:var(--recess);text-align:left;font-size:.6875rem;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:.7rem 1.15rem;
+  border-bottom:1px solid var(--border);}
+table.vtable th.num,table.vtable td.num{text-align:right;font-variant-numeric:tabular-nums}
+table.vtable tbody td{padding:.8rem 1.15rem;border-bottom:1px solid var(--hair);color:var(--ink);font-weight:500;}
+table.vtable tbody td .code{color:var(--muted);font-weight:600;font-size:.75rem;margin-left:.4rem}
+table.vtable tbody td.num{font-weight:600}
+table.vtable tfoot td{padding:.8rem 1.15rem;font-weight:700;color:var(--ink);border-top:2px solid var(--border);
+  background:var(--surface);}
+table.vtable tfoot td.num{font-variant-numeric:tabular-nums}
+.vmix{margin-top:.9rem;}
+.vmix .bar{height:8px;border-radius:6px;overflow:hidden;display:flex;background:var(--recess);border:1px solid var(--border)}
+.vmix .bar .seg-ca{background:var(--brand)} .vmix .bar .seg-hi{background:#7fb8e6}
+.vmix .key{display:flex;gap:1.25rem;margin-top:.5rem;font-size:.75rem;color:var(--text-2);font-weight:500}
+.vmix .key .k{display:inline-flex;align-items:center;gap:.4rem}
+.vmix .key .kd{width:.7rem;height:.7rem;border-radius:.15rem}
+.vmix .key .kd.ca{background:var(--brand)} .vmix .key .kd.hi{background:#7fb8e6}
+.caption{font-size:.75rem;color:var(--muted);margin-top:.6rem;line-height:1.4}
+
+/* ================= FOOTER NOTE ================================================================= */
+.foot{margin-top:1.5rem;padding:1rem 1.15rem;background:var(--recess);border:1px solid var(--border);
+  border-radius:8px;font-size:.75rem;color:var(--text-2);line-height:1.55;}
+.foot b{color:var(--ink);font-weight:700}
+.foot .row{margin-bottom:.4rem}
+.foot .row:last-child{margin-bottom:0}
+</style>
+
+<!-- inline SVG icon definitions (LWS-safe) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ic-check" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.2 14.2-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7Z"/></symbol>
+  <symbol id="ic-warn" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 1 21h22L12 2Zm1 15h-2v-2h2v2Zm0-4h-2V9h2v4Z"/></symbol>
+  <symbol id="ic-error" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4 12.6L14.6 16 12 13.4 9.4 16 8 14.6 10.6 12 8 9.4 9.4 8 12 10.6 14.6 8 16 9.4 13.4 12 16 14.6Z"/></symbol>
+  <symbol id="ic-doc" viewBox="0 0 24 24"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm3 18H7V4h6v5h4v11Z"/></symbol>
+</svg>
+
+<div class="chrome">
+  <span class="app" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-doc"/></svg></span>
+  <span class="crumb">Astrus Submission <span class="sep">&rsaquo;</span> <b>SUB 022667</b></span>
+</div>
+
+<main class="canvas">
+  <article class="card" aria-label="Submission summary datasheet for A & B Painting, Inc.">
+    <div class="card-body">
+
+      <!-- ============ HEADER · P0 WHO ============ -->
+      <header>
+        <div class="hd-eyebrow">
+          <span class="eyebrow">Submission Summary</span>
+          <span class="badge-ai">AI Processed</span>
+        </div>
+        <h1 class="applicant">A &amp; B Painting, Inc.</h1>
+        <div class="meta">
+          <span class="chip new">New</span>
+          <span class="dot" aria-hidden="true">&bull;</span>
+          <span>Submission <span class="sub-id">SUB&nbsp;022667</span></span>
+          <span class="dot" aria-hidden="true">&bull;</span>
+          <span class="chip stage"><span class="pdot" aria-hidden="true"></span>Clearance Requested</span>
+        </div>
+      </header>
+
+      <!-- ============ LOSS-RUN FLAG · P4 (pops, submission-level) ============ -->
+      <div class="flag" role="note" aria-label="Loss runs not produced">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-error"/></svg>
+        <div class="txt">
+          <div class="t">Loss runs &mdash; Not produced</div>
+          <div class="c">No loss-run document was produced for this submission.</div>
+        </div>
+        <span class="tag">Submission-level</span>
+      </div>
+
+      <!-- ============ SUBMISSION DETAILS · P0/P5 definition grid ============ -->
+      <section class="section" aria-labelledby="sec-details">
+        <div class="section-hd">
+          <span class="s-title" id="sec-details">Submission Details</span>
+        </div>
+        <dl class="defgrid">
+
+          <div class="def def--wide">
+            <dt>Named insureds</dt>
+            <dd>
+              <span class="tnum">3</span> named insureds <span class="sub">&middot; all Artisan Contractor</span>
+              <ul class="ni-list">
+                <li><span class="n">1</span>A &amp; B Painting, Inc. <span class="role">— primary</span></li>
+                <li><span class="n">2</span>A &amp; B Painting West, Inc.</li>
+                <li><span class="n">3</span>ACR Commercial Drywall, Inc.</li>
+              </ul>
+            </dd>
+          </div>
+
+          <div class="def def--wide">
+            <dt>Description of operations</dt>
+            <dd class="desc">Painting and wall-covering services for commercial and public projects; works as a subcontractor under competitive-bid / fixed-price contracts; greater Northern California; union workforce.</dd>
+          </div>
+
+          <div class="def">
+            <dt>Average employment</dt>
+            <dd><span class="tnum">50</span> employees</dd>
+          </div>
+          <div class="def">
+            <dt>Submitting broker</dt>
+            <dd>R2 Solutions</dd>
+          </div>
+
+          <div class="def">
+            <dt>Effective date</dt>
+            <dd class="tnum">07/01/2026</dd>
+          </div>
+          <div class="def">
+            <dt>Expiration date</dt>
+            <dd><span class="term-flow"><span class="tnum">07/01/2027</span><span class="len">12-month term</span></span></dd>
+          </div>
+
+          <div class="def">
+            <dt>State(s)</dt>
+            <dd>CA <span class="sub">(primary)</span> &middot; HI</dd>
+          </div>
+          <div class="def">
+            <dt>Carrier / Market</dt>
+            <dd>Chubb <span class="sub">&middot; Place</span></dd>
+          </div>
+
+          <div class="def">
+            <dt>Third-party administrator</dt>
+            <dd>ESIS</dd>
+          </div>
+          <div class="def">
+            <dt>Lines of business</dt>
+            <dd><span class="tnum">5</span> produced</dd>
+          </div>
+
+          <div class="def def--wide" style="border-bottom:none">
+            <dt>Locations</dt>
+            <dd>
+              <span class="tnum">2</span> locations
+              <ul class="loc-list">
+                <li>672 Walsh Ave, Santa Clara, CA 95050</li>
+                <li>2270 Palou Ave, San Francisco, CA 94124</li>
+              </ul>
+            </dd>
+          </div>
+
+        </dl>
+      </section>
+
+      <!-- ============ LINES OF BUSINESS · P1/P2 centerpiece ============ -->
+      <section class="section" aria-labelledby="sec-lob">
+        <div class="section-hd">
+          <span class="s-title" id="sec-lob">Lines of Business</span>
+          <span class="s-count"><span class="tnum">5</span> produced</span>
+        </div>
+
+        <div class="lob-list">
+
+          <div class="lob produced">
+            <svg class="stat-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-check"/></svg>
+            <div class="who">
+              <div class="name">Workers&rsquo; Compensation<span class="st">&middot; CA</span></div>
+              <div class="status-word">Produced</div>
+            </div>
+            <div class="expo">
+              <div class="lbl">Payroll</div>
+              <div class="val">$4,928,350</div>
+            </div>
+          </div>
+
+          <div class="lob produced">
+            <svg class="stat-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-check"/></svg>
+            <div class="who">
+              <div class="name">General Liability<span class="st">&middot; CA</span></div>
+              <div class="status-word">Produced</div>
+              <div class="subnote">Subcontracted $1,050,000 &mdash; wall covering, specialty coatings, scaffolding</div>
+            </div>
+            <div class="expo">
+              <div class="lbl">Revenue</div>
+              <div class="val">$8,500,000</div>
+            </div>
+          </div>
+
+          <div class="lob produced">
+            <svg class="stat-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-check"/></svg>
+            <div class="who">
+              <div class="name">Commercial Auto<span class="st">&middot; CA</span></div>
+              <div class="status-word">Produced</div>
+            </div>
+            <div class="expo">
+              <div class="lbl">Vehicles</div>
+              <div class="val">31<span class="u">units</span></div>
+            </div>
+          </div>
+
+          <div class="lob produced">
+            <svg class="stat-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-check"/></svg>
+            <div class="who">
+              <div class="name">Commercial Auto<span class="st">&middot; HI</span></div>
+              <div class="status-word">Produced</div>
+              <div class="subnote">Hawaii is a separate LOB &mdash; requires its own policy</div>
+            </div>
+            <div class="expo">
+              <div class="lbl">Vehicles</div>
+              <div class="val">2<span class="u">units</span></div>
+            </div>
+          </div>
+
+          <div class="lob partial">
+            <svg class="stat-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-warn"/></svg>
+            <div class="who">
+              <div class="name">Excess Liability<span class="st">&middot; CA + HI</span></div>
+              <div class="status-word">Partial</div>
+            </div>
+            <div class="expo">
+              <div class="lbl">Effective date</div>
+              <div class="val">No effective date on record</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- persistent plain-words legend (SHARED-SPEC-V2 §7) -->
+        <div class="legend" aria-label="What the line-of-business colors mean">
+          <div class="li"><span class="swatch g" aria-hidden="true"></span>
+            <span class="lt"><b>Produced</b> — <span>the line is on the submission and its expected exposure was produced (payroll, revenue, or a vehicle schedule).</span></span></div>
+          <div class="li"><span class="swatch a" aria-hidden="true"></span>
+            <span class="lt"><b>Partial</b> — <span>produced, but a specific expected field is empty (here: no effective date).</span></span></div>
+          <div class="li"><span class="swatch r" aria-hidden="true"></span>
+            <span class="lt"><b>Not produced</b> — <span>the item is on the submission but no data came back for it (e.g. loss runs, above).</span></span></div>
+        </div>
+      </section>
+
+      <!-- ============ VEHICLE SCHEDULE · P3 quiet table ============ -->
+      <section class="section" aria-labelledby="sec-veh">
+        <div class="section-hd">
+          <span class="s-title" id="sec-veh">Commercial Auto &mdash; Vehicle Schedule</span>
+          <span class="s-count"><span class="tnum">33</span> vehicles</span>
+        </div>
+
+        <div class="vtable-wrap">
+          <table class="vtable">
+            <thead>
+              <tr><th scope="col">State</th><th scope="col" class="num">Vehicles</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>California<span class="code">CA</span></td><td class="num">31</td></tr>
+              <tr><td>Hawaii<span class="code">HI</span></td><td class="num">2</td></tr>
+            </tbody>
+            <tfoot>
+              <tr><td>Total</td><td class="num">33</td></tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- one honest micro-viz: per-state split of the real counts -->
+        <div class="vmix" aria-hidden="true">
+          <div class="bar"><span class="seg-ca" style="width:93.9%"></span><span class="seg-hi" style="width:6.1%"></span></div>
+          <div class="key">
+            <span class="k"><span class="kd ca"></span>CA · 31</span>
+            <span class="k"><span class="kd hi"></span>HI · 2</span>
+          </div>
+        </div>
+        <p class="caption">Counts summarize the produced vehicle schedule by state. Hawaii units are written on the separate HI Commercial Auto line.</p>
+      </section>
+
+      <!-- ============ FOOTER NOTE ============ -->
+      <div class="foot">
+        <div class="row"><b>Concept 04 · Underwriter Datasheet.</b> The listed brief made beautiful — a disciplined definition grid plus a quiet vehicle-schedule table, with the loss-run gap surfaced up top.</div>
+        <div class="row"><b>For:</b> the underwriter who wants the full standardized brief at a glance — who is it, is every line produced, what are the exposures, and what&rsquo;s missing.</div>
+        <div class="row"><b>Buildable as:</b> <code>c-astrus-submission-datasheet</code> — lightning-card + semantic &lt;dl&gt; + lightning-datatable (schedule) + lightning-formatted-number/-currency/-date-time; getRecord + Apex for the deterministic PRODUCED status. Light-mode SLDS, inline SVG/CSS, LWS-safe.</div>
+      </div>
+
+    </div>
+  </article>
+</main>

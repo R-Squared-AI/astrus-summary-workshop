@@ -3,61 +3,28 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Astrus Underwriter-Controlled Reprocessing Solution Workshop</title>
+<title>Astrus Submission Summary — Design Round 2</title>
 <style>
+  /* LIGHT MODE ONLY. No dark styling of any kind; no theme switching (Round-2 law). */
   :root {
-    --brand: #0176d3;
+    --brand:      #0176d3;
     --brand-dark: #032d60;
-    --tint-1: #f3f8fe;
-    --tint-2: #eaf2fc;
-    --tint-3: #dbeafe;
-    --success: #2e7d32;
-    --warning: #f57f17;
-    --error: #b71c1c;
-    --neutral-text: #181818;
-    --neutral-muted: #5c5c5c;
-    --border: #e5e5e5;
-    --surface: #ffffff;
-    --page-bg: #f3f3f3;
-    --shadow: 0 2px 4px rgba(0,0,0,.08);
-    --shadow-lg: 0 6px 20px rgba(3,45,96,.12);
+    --ink:        #181818;
+    --text-2:     #514f4d;
+    --muted:      #706e6b;
+    --border:     #e5e5e5;
+    --surface:    #ffffff;
+    --recess:     #fafaf9;
+    --page-bg:    #f3f3f3;
+    --blue-tint:  #e8f4fd;
+    --blue-tint-bd:#c9e5f9;
+    --produced:   #2e7d32;  --produced-bg:#edf7ed;
+    --partial:    #a86403;  --partial-bg: #fff8e1;
+    --notprod:    #ba0517;  --notprod-bg: #fef0f0;  --notprod-bd:#f5c0c0;
+    --na:         #706e6b;  --na-bg:      #f3f3f3;
+    --shadow:     0 1px 3px rgba(0,0,0,0.08);
+    --shadow-lg:  0 8px 24px rgba(3,45,96,0.14);
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --brand: #1b96ff;
-      --brand-dark: #90d0fe;
-      --tint-1: #22252a;
-      --tint-2: #24282e;
-      --tint-3: #2b3440;
-      --success: #4caf50;
-      --warning: #ffb300;
-      --error: #ef5350;
-      --neutral-text: #f3f3f3;
-      --neutral-muted: #b0b0b0;
-      --border: #3a3a3a;
-      --surface: #1b1b1b;
-      --page-bg: #141414;
-      --shadow: 0 2px 4px rgba(0,0,0,.4);
-      --shadow-lg: 0 6px 20px rgba(0,0,0,.5);
-    }
-  }
-  :root[data-theme="dark"] {
-    --brand: #1b96ff;
-    --brand-dark: #90d0fe;
-    --tint-1: #22252a;
-    --tint-2: #24282e;
-    --tint-3: #2b3440;
-    --success: #4caf50;
-    --warning: #ffb300;
-    --error: #ef5350;
-    --neutral-text: #f3f3f3;
-    --neutral-muted: #b0b0b0;
-    --border: #3a3a3a;
-    --surface: #1b1b1b;
-    --page-bg: #141414;
-    --shadow: 0 2px 4px rgba(0,0,0,.4);
-    --shadow-lg: 0 6px 20px rgba(0,0,0,.5);
   }
 
   * { box-sizing: border-box; }
@@ -65,10 +32,11 @@
   body {
     margin: 0;
     font-family: var(--font);
-    color: var(--neutral-text);
+    color: var(--ink);
     background: var(--page-bg);
     line-height: 1.5;
     font-size: 16px;
+    -webkit-font-smoothing: antialiased;
   }
 
   /* ---- Faux Lightning breadcrumb chrome ---- */
@@ -83,28 +51,26 @@
     align-items: center;
     gap: .5rem;
   }
-  :root[data-theme="dark"] .breadcrumb,
-  @media (prefers-color-scheme: dark) { }
-  .breadcrumb .sep { opacity: .55; }
+  .breadcrumb .sep  { opacity: .55; }
   .breadcrumb .home { opacity: .85; }
 
   /* ---- Header ---- */
   header.hero {
-    background: linear-gradient(135deg, var(--brand-dark) 0%, #0b3d78 55%, var(--brand) 140%);
+    background: linear-gradient(135deg, var(--brand-dark) 0%, #0b3d78 55%, var(--brand) 145%);
     color: #fff;
-    padding: 2.75rem 1.5rem 2.5rem;
+    padding: 3rem 1.5rem 2.75rem;
     position: relative;
     overflow: hidden;
   }
   header.hero::after {
     content: "";
     position: absolute;
-    right: -80px; top: -80px;
-    width: 320px; height: 320px;
+    right: -80px; top: -90px;
+    width: 340px; height: 340px;
     background: radial-gradient(circle, rgba(255,255,255,.10), transparent 70%);
     pointer-events: none;
   }
-  .hero-inner { max-width: 1180px; margin: 0 auto; position: relative; z-index: 1; }
+  .hero-inner { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
   .eyebrow {
     display: inline-block;
     font-size: 0.75rem;
@@ -115,199 +81,173 @@
     border: 1px solid rgba(255,255,255,.28);
     padding: .3rem .7rem;
     border-radius: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.15rem;
   }
   header.hero h1 {
-    margin: 0 0 .75rem;
-    font-size: clamp(1.6rem, 3.4vw, 2.5rem);
+    margin: 0 0 .8rem;
+    font-size: clamp(1.9rem, 3.8vw, 2.9rem);
     font-weight: 700;
-    line-height: 1.15;
-    max-width: 22ch;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    max-width: 20ch;
   }
   header.hero p.lede {
     margin: 0;
-    font-size: clamp(1rem, 1.4vw, 1.1rem);
-    max-width: 70ch;
-    color: rgba(255,255,255,.92);
+    font-size: clamp(1rem, 1.4vw, 1.15rem);
+    max-width: 74ch;
+    color: rgba(255,255,255,.93);
   }
-  .theme-toggle {
-    position: absolute;
-    top: 1rem; right: 1.5rem;
-    z-index: 3;
-    background: rgba(255,255,255,.16);
-    color: #fff;
-    border: 1px solid rgba(255,255,255,.4);
-    border-radius: 1.25rem;
-    padding: .4rem .9rem;
-    font-size: .8125rem;
-    font-weight: 600;
-    font-family: var(--font);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: .4rem;
-  }
-  .theme-toggle:hover { background: rgba(255,255,255,.28); }
-  .theme-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
   /* ---- Content shell ---- */
-  main { max-width: 1180px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+  main { max-width: 1200px; margin: 0 auto; padding: 2.25rem 1.5rem 3rem; }
 
   /* ---- Sample submission strip ---- */
   .sample {
     background: var(--surface);
     border: 1px solid var(--border);
     border-left: 4px solid var(--brand);
-    border-radius: .25rem;
+    border-radius: 0 8px 8px 0;
     box-shadow: var(--shadow);
-    padding: 1.1rem 1.25rem;
-    margin-bottom: 1.5rem;
+    padding: 1.25rem 1.4rem;
+    margin-bottom: 1.75rem;
   }
   .sample h2 {
-    margin: 0 0 .6rem;
-    font-size: .8125rem;
-    font-weight: 700;
+    margin: 0 0 .8rem;
+    font-size: .75rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: .08em;
-    color: var(--neutral-muted);
+    letter-spacing: .05em;
+    color: var(--muted);
   }
-  .sample .facts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .5rem .55rem;
-  }
+  .sample .facts { display: flex; flex-wrap: wrap; gap: .55rem; }
   .chip {
     display: inline-flex;
     align-items: center;
-    gap: .35rem;
+    gap: .4rem;
     font-size: .8125rem;
     font-weight: 600;
-    padding: .28rem .6rem;
+    padding: .32rem .65rem;
     border-radius: 1rem;
-    background: var(--tint-2);
-    color: var(--neutral-text);
+    background: var(--recess);
+    color: var(--ink);
     border: 1px solid var(--border);
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
-  .chip .dot { width: .55rem; height: .55rem; border-radius: 50%; flex: none; }
-  .chip.green  { background: color-mix(in srgb, var(--success) 12%, var(--surface)); border-color: color-mix(in srgb, var(--success) 35%, var(--border)); }
-  .chip.amber  { background: color-mix(in srgb, var(--warning) 14%, var(--surface)); border-color: color-mix(in srgb, var(--warning) 40%, var(--border)); }
-  .chip.red    { background: color-mix(in srgb, var(--error) 12%, var(--surface)); border-color: color-mix(in srgb, var(--error) 38%, var(--border)); }
-  .chip.green .dot { background: var(--success); }
-  .chip.amber .dot { background: var(--warning); }
-  .chip.red .dot   { background: var(--error); }
+  .chip .dot { width: .55rem; height: .55rem; border-radius: 50%; flex: none; background: var(--brand); }
+  .chip.green { background: var(--produced-bg); border-color: color-mix(in srgb, var(--produced) 35%, var(--border)); color: #1c531f; }
+  .chip.amber { background: var(--partial-bg);  border-color: color-mix(in srgb, var(--partial) 40%, var(--border));  color: #7a4a02; }
+  .chip.red   { background: var(--notprod-bg);  border-color: var(--notprod-bd); color: #8a0311; }
+  .chip.green .dot { background: var(--produced); }
+  .chip.amber .dot { background: var(--partial); }
+  .chip.red .dot   { background: var(--notprod); }
 
-  /* ---- Intro + how-to ---- */
-  .intro { margin-bottom: 1.75rem; }
-  .intro p { margin: 0 0 .85rem; max-width: 78ch; color: var(--neutral-text); }
+  /* ---- Intro ---- */
+  .intro { margin-bottom: 2rem; }
+  .intro p { margin: 0 0 .85rem; max-width: 80ch; color: var(--text-2); }
   .intro strong { color: var(--brand-dark); }
 
-  .poles {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin: 1.25rem 0 0;
-  }
-  .pole {
-    background: var(--tint-1);
+  /* ---- Legend ---- */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.75rem;
+    background: var(--recess);
     border: 1px solid var(--border);
-    border-radius: .25rem;
-    padding: .9rem 1rem;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0 0;
+    font-size: .8125rem;
   }
-  .pole h3 {
-    margin: 0 0 .3rem;
-    font-size: .9375rem;
-    color: var(--brand-dark);
-  }
-  .pole p { margin: 0; font-size: .875rem; color: var(--neutral-muted); }
-  .pole .pill { font-size: .75rem; font-weight: 700; }
-
-  .howto {
-    background: color-mix(in srgb, var(--warning) 8%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--warning) 32%, var(--border));
-    border-radius: .25rem;
-    padding: .9rem 1.1rem;
-    margin: 1.5rem 0 2rem;
-    font-size: .9rem;
-  }
-  .howto b { color: var(--brand-dark); }
+  .legend .li { display: flex; align-items: flex-start; gap: .55rem; max-width: 32ch; }
+  .legend .sw { width: .85rem; height: .85rem; border-radius: 3px; flex: none; margin-top: .15rem; }
+  .legend .sw.g { background: var(--produced); }
+  .legend .sw.a { background: var(--partial); }
+  .legend .sw.r { background: var(--notprod); }
+  .legend b { color: var(--ink); }
+  .legend span.t { color: var(--muted); }
 
   .section-label {
-    font-size: 1.125rem;
+    font-size: 1.375rem;
     font-weight: 700;
-    color: var(--brand-dark);
-    background: var(--tint-3);
-    border-left: 4px solid var(--brand);
-    padding: .5rem .85rem;
-    border-radius: 0 .25rem .25rem 0;
-    margin: 0 0 1.25rem;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    margin: 2.5rem 0 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+  .section-label::before {
+    content: "";
+    width: 4px; height: 1.5rem;
+    background: var(--brand);
+    border-radius: 2px;
   }
 
   /* ---- Card grid ---- */
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 1.25rem;
+    gap: 1.5rem;
   }
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: .25rem;
+    border-radius: 8px;
     box-shadow: var(--shadow);
-    padding: 1.25rem 1.25rem 1.1rem;
+    padding: 1.5rem 1.5rem 1.35rem;
     display: flex;
     flex-direction: column;
     transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
   }
-  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: color-mix(in srgb, var(--brand) 40%, var(--border)); }
+  .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: color-mix(in srgb, var(--brand) 45%, var(--border)); }
 
-  .card-top { display: flex; align-items: center; gap: .7rem; margin-bottom: .65rem; }
+  .card-top { display: flex; align-items: center; gap: .8rem; margin-bottom: .9rem; }
   .num {
     flex: none;
-    width: 2.25rem; height: 2.25rem;
-    border-radius: .4rem;
-    background: var(--tint-3);
+    width: 2.5rem; height: 2.5rem;
+    border-radius: 8px;
+    background: var(--blue-tint);
     color: var(--brand-dark);
     font-weight: 700;
     font-size: 1.05rem;
     display: flex; align-items: center; justify-content: center;
+    font-variant-numeric: tabular-nums;
   }
-  .card h3 { margin: 0; font-size: 1.375rem; font-weight: 700; color: var(--brand-dark); line-height: 1.15; }
+  .card h3 { margin: 0; font-size: 1.375rem; font-weight: 700; color: var(--ink); line-height: 1.15; letter-spacing: -0.01em; }
 
-  .pole-tag {
-    display: inline-block;
-    font-size: .6875rem;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    padding: .22rem .55rem;
-    border-radius: 1rem;
-    margin-bottom: .75rem;
-    align-self: flex-start;
-  }
-  .pole-tag.panel { background: color-mix(in srgb, var(--brand) 14%, var(--surface)); color: var(--brand); border: 1px solid color-mix(in srgb, var(--brand) 40%, var(--border)); }
-  .pole-tag.field { background: var(--tint-3); color: var(--brand-dark); border: 1px solid color-mix(in srgb, var(--brand-dark) 30%, var(--border)); }
-
-  .thesis { font-size: .9375rem; margin: 0 0 .85rem; color: var(--neutral-text); }
+  .thesis { font-size: .9375rem; margin: 0 0 1rem; color: var(--text-2); line-height: 1.55; }
   .job {
     font-size: .8125rem;
-    color: var(--neutral-muted);
-    background: var(--tint-1);
-    border-radius: .25rem;
-    padding: .55rem .7rem;
-    margin: 0 0 .9rem;
-    border: 1px solid var(--border);
+    color: var(--text-2);
+    background: var(--recess);
+    border-left: 3px solid var(--blue-tint-bd);
+    border-radius: 0 6px 6px 0;
+    padding: .6rem .8rem;
+    margin: 0 0 1.1rem;
   }
-  .job b { color: var(--brand-dark); text-transform: uppercase; font-size: .6875rem; letter-spacing: .06em; display: block; margin-bottom: .2rem; }
+  .job b {
+    color: var(--muted);
+    text-transform: uppercase;
+    font-size: .6875rem;
+    letter-spacing: .05em;
+    font-weight: 600;
+    display: block;
+    margin-bottom: .25rem;
+  }
 
   .card-footer { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
   .badge-feas {
     font-size: .75rem;
-    font-weight: 700;
-    color: var(--success);
-    display: inline-flex; align-items: center; gap: .35rem;
+    font-weight: 600;
+    color: var(--produced);
+    display: inline-flex; align-items: center; gap: .4rem;
+    background: var(--produced-bg);
+    border: 1px solid color-mix(in srgb, var(--produced) 30%, var(--border));
+    padding: .3rem .6rem;
+    border-radius: 1rem;
   }
-  .badge-feas .dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--success); }
+  .badge-feas .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--produced); }
 
   .open-btn {
     display: inline-flex;
@@ -318,27 +258,53 @@
     text-decoration: none;
     font-weight: 700;
     font-size: .875rem;
-    padding: .55rem 1rem;
-    border-radius: .25rem;
+    padding: .58rem 1.05rem;
+    border-radius: 6px;
     transition: background .15s ease;
   }
   .open-btn:hover { background: color-mix(in srgb, var(--brand) 82%, #000); }
   .open-btn:focus-visible { outline: 2px solid var(--brand-dark); outline-offset: 2px; }
-  :root[data-theme="dark"] .open-btn { color: #041627; }
+
+  /* ---- Round 1 archive ---- */
+  .archive {
+    margin-top: 3.5rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--border);
+  }
+  .archive h2 {
+    font-size: .9375rem;
+    font-weight: 700;
+    color: var(--muted);
+    margin: 0 0 .35rem;
+  }
+  .archive p { font-size: .8125rem; color: var(--muted); margin: 0 0 1rem; max-width: 72ch; }
+  .archive-list { display: flex; flex-wrap: wrap; gap: .6rem; }
+  .archive-list a {
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--text-2);
+    text-decoration: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: .38rem .85rem;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .archive-list a:hover { border-color: var(--brand); color: var(--brand); }
+  .archive-list a .old { color: var(--muted); font-weight: 400; }
 
   /* ---- Footer ---- */
   footer {
-    max-width: 1180px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 1.5rem;
-    border-top: 1px solid var(--border);
-    color: var(--neutral-muted);
+    padding: 1.75rem 1.5rem 2.5rem;
+    color: var(--muted);
     font-size: .8125rem;
   }
   footer strong { color: var(--brand-dark); }
+  footer code { background: var(--recess); border: 1px solid var(--border); border-radius: 3px; padding: 0 .3em; font-size: .95em; }
 
   @media (max-width: 720px) {
-    .poles { grid-template-columns: 1fr; }
     .grid { grid-template-columns: 1fr; }
   }
 </style>
@@ -346,18 +312,15 @@
 <body>
   <div class="breadcrumb">
     <span class="home">Astrus</span><span class="sep">›</span>
-    <span>Solution Workshops</span><span class="sep">›</span>
-    <span>At-a-Glance Submission Summary</span>
+    <span>Design Workshops</span><span class="sep">›</span>
+    <span>Submission Summary — Round 2</span>
   </div>
 
   <header class="hero">
-    <button class="theme-toggle" id="themeToggle" aria-label="Toggle light or dark theme">
-      <span id="themeIcon">◐</span><span id="themeLabel">Dark</span>
-    </button>
     <div class="hero-inner">
-      <span class="eyebrow">Design Workshop · 6 Candidate Concepts</span>
-      <h1>Astrus Underwriter-Controlled Reprocessing Solution Workshop</h1>
-      <p class="lede">Six distinct, production-realistic design concepts for the <strong>at-a-glance submission summary</strong> — the first panel an underwriter sees at the top of an Astrus submission in Salesforce Lightning. Each mockup renders the same live sample submission and puts underwriter-controlled reprocessing right where the data gap is.</p>
+      <span class="eyebrow">Design Round 2 · 6 New Concepts</span>
+      <h1>Astrus Submission Summary</h1>
+      <p class="lede">Six new design concepts for the <strong>at-a-glance summary</strong> pinned to the top of an Astrus insurance submission in Salesforce — a beautiful, highly informative snapshot of <strong>what the submission contains and which lines of business were produced</strong>. Every concept renders the same live sample submission so they compare head-to-head, and each is realistically buildable as a light-mode Lightning Web Component.</p>
     </div>
   </header>
 
@@ -365,108 +328,91 @@
     <section class="sample" aria-label="Shared sample submission">
       <h2>Shared sample submission — every concept renders this</h2>
       <div class="facts">
-        <span class="chip"><span class="dot" style="background:var(--brand)"></span>A &amp; B Painting, Inc. · SUB 022667</span>
-        <span class="chip">New · Target: Chubb · Broker: R2 Solutions</span>
-        <span class="chip amber"><span class="dot"></span>Clearance Requested (3 of 4)</span>
-        <span class="chip amber"><span class="dot"></span>Confidence 73.5%</span>
-        <span class="chip green"><span class="dot"></span>WC $4,928,350</span>
-        <span class="chip green"><span class="dot"></span>GL $8,500,000</span>
-        <span class="chip amber"><span class="dot"></span>Auto schedule PARTIAL</span>
-        <span class="chip red"><span class="dot"></span>Loss run MISSING</span>
-        <span class="chip">🔔 1 · New file: Loss_Run_2021-2025.pdf</span>
-        <span class="chip">🔒 GL Bound Premium $42,500</span>
+        <span class="chip"><span class="dot"></span>A &amp; B Painting, Inc. · SUB 022667</span>
+        <span class="chip">3 named insureds · New · Artisan Contractor</span>
+        <span class="chip">Term 07/01/2026 – 07/01/2027</span>
+        <span class="chip">CA + HI · Broker R2 Solutions · Chubb</span>
+        <span class="chip green"><span class="dot"></span>WC payroll $4,928,350</span>
+        <span class="chip green"><span class="dot"></span>GL revenue $8,500,000</span>
+        <span class="chip green"><span class="dot"></span>Commercial Auto 33 vehicles</span>
+        <span class="chip amber"><span class="dot"></span>Excess Liability — Partial</span>
+        <span class="chip red"><span class="dot"></span>Loss runs — Not produced</span>
       </div>
     </section>
 
     <section class="intro">
-      <p>This gallery presents candidate designs for a single high-signal panel that answers an underwriter's first question in seconds: <strong>what came in, what's solid, and what's missing</strong> — and, when a gap exists, how to trigger a <strong>targeted, underwriter-controlled reprocess</strong> without leaving the summary. The running example is Josh's exact anti-scenario: a submission that looks healthy but is missing the loss run he needs, followed by a new loss-run file landing on the record. Every concept tells that story: <em>flag the gap → a new file arrives → pick per-LOB scope → confirm → reprocess</em> (a populated Bound Premium stays locked).</p>
+      <p>This gallery presents candidate designs for a single high-signal panel that answers an underwriter's first questions in seconds: <strong>who is the applicant, which lines of business were produced, what are the key exposures, and are the loss runs here?</strong> The design centers on the priorities underwriters actually named — named insured first, then lines of business (&ldquo;boom, boom, boom&rdquo;) with a crisp per-LOB <strong>PRODUCED</strong> status, then the exposure inside each LOB, then the loss-run flag.</p>
 
-      <div class="poles">
-        <div class="pole">
-          <h3><span class="pill">Standalone panel / tab pole</span></h3>
-          <p>Concepts 01, 02, 04, 05 — a dedicated summary component that sits above the record. Best if the summary should be its own place.</p>
-        </div>
-        <div class="pole">
-          <h3><span class="pill">Field-evidence extension pole</span></h3>
-          <p>Concepts 03 &amp; 06 — extend the existing data-quality / field-evidence UI so the summary lives inside the trust surface underwriters already use.</p>
-        </div>
-      </div>
-
-      <div class="howto">
-        <b>How to read these:</b> Open any concept below — each is a self-contained, SLDS-styled mockup wrapped in a faux Lightning record page, all rendering the same SUB 022667 data so you can compare designs head-to-head. Look for (1) how fast the headline reads, (2) how present/partial/missing is signalled, and (3) where the reprocess control lives. The <b>tab-vs-panel spread</b> above is deliberate — Josh &amp; Rich left that decision open, so we span both poles for you to choose.
+      <div class="legend" aria-label="Per-line-of-business status legend">
+        <div class="li"><span class="sw g"></span><span><b>Produced</b> — <span class="t">the LOB is present and its expected exposure was produced (WC has payroll, GL has revenue, Auto has a vehicle schedule).</span></span></div>
+        <div class="li"><span class="sw a"></span><span><b>Partial</b> — <span class="t">the LOB was produced, but a specific expected element is verifiably empty (e.g. no effective date).</span></span></div>
+        <div class="li"><span class="sw r"></span><span><b>Not produced</b> — <span class="t">the LOB is on the submission but no data was produced for it. Requested, but nothing came back.</span></span></div>
       </div>
     </section>
 
     <h2 class="section-label">The six concepts</h2>
     <div class="grid" id="grid"></div>
+
+    <section class="archive" aria-label="Round 1 archive">
+      <h2>Round 1 — superseded by feedback</h2>
+      <p>The original six concepts, kept for reference. Round-2 feedback removed dark mode, extraction-confidence, reprocessing controls, tabs, and the timeline/story and split-ledger layouts — so these are archived, not featured.</p>
+      <div class="archive-list" id="archive"></div>
+    </section>
   </main>
 
   <footer>
-    <p>These are <strong>static HTML/CSS/JS mockups</strong> of a future Lightning Web Component — hand-rolled to match SLDS tokens, type ladder, and confidence bands, with no external frameworks or CDNs. Every pattern shown maps 1:1 to a real LWC (base Lightning components, Lightning Data Service wires, inline SVG/CSS charts) so the winning concept is realistic to build. Scope is the summary component only. Sample data reflects the alliantinsurance--qa record SUB 022667.</p>
+    <p>These are <strong>static HTML/CSS mockups</strong> of a future Lightning Web Component — hand-rolled to match SLDS tokens, type ladder, and status semantics, with no external frameworks, fonts, or CDNs. Every pattern maps to a real LWC (base <code>lightning-*</code> components, Lightning Data Service, inline SVG/CSS). Light mode only. Sample data reflects the alliantinsurance--qa record SUB 022667.</p>
   </footer>
 
 <script>
   const CONCEPTS = [
-    { n:"01", slug:"01-command-center.html", name:"Command Center",
-      pole:"panel",
-      thesis:"Every decision-driving number on one dense, glanceable board — scan the whole submission in two seconds.",
-      job:"In one look, is this submission complete enough to engage, and where are the gaps?" },
-    { n:"02", slug:"02-underwriter-brief.html", name:"Underwriter Brief",
-      pole:"panel",
-      thesis:"A standardized, deterministic one-block-per-topic briefing that reads like a senior underwriter's file note — same skeleton every time, not free-text LLM.",
-      job:"Read the file the way I'd brief a colleague — what came in, what's solid, what's missing." },
-    { n:"03", slug:"03-triage-traffic-light.html", name:"Triage Traffic-Light",
-      pole:"field",
-      thesis:"A standardized red / amber / green present-vs-missing checklist of the top things underwriters need, with reprocess right where the gap is.",
-      job:"Tell me instantly what's here vs missing, worst first, and let me fix a gap in place." },
-    { n:"04", slug:"04-tabbed-deep-dive.html", name:"Tabbed Deep-Dive",
-      pole:"panel",
-      thesis:"A permanent at-a-glance header band, then every dimension one click away — never leave the summary to drill in.",
-      job:"Give me the headline instantly and let me inspect any dimension without navigating away." },
-    { n:"05", slug:"05-timeline-story.html", name:"Timeline / Story",
-      pole:"panel",
-      thesis:"The submission as a lifecycle pipeline — Pre-processed → Extraction Completed → Clearance Requested → Cleared — with reprocess at the stage that stalled.",
-      job:"Where is this in processing, what's blocking it, can I re-run the incomplete stage?" },
-    { n:"06", slug:"06-split-ledger.html", name:"Split Ledger",
-      pole:"field",
-      thesis:"A two-column ledger — extracted value vs source & confidence — with inline edit and targeted reprocess per field.",
-      job:"Trust-but-verify each captured value and fix the weak ones without leaving the summary." },
+    { n:"01", slug:"01-coverage-status-board.html", name:"Coverage Status Board",
+      thesis:"The evolved per-LOB &ldquo;boom boom boom&rdquo; — each line of business a status card (Produced / Partial / Not produced) with its exposure figure baked in, a plain-words legend, and the loss-run flag.",
+      job:"At a glance, which lines of business were produced, and where's the gap?" },
+    { n:"02", slug:"02-executive-hero.html", name:"Executive Hero",
+      thesis:"One cinematic hero: the applicant name huge, a 4–6 KPI strip, a compact LOB status rail, and the loss-run &ldquo;Not produced&rdquo; flag that pops.",
+      job:"Give me the headline of this submission in a single confident glance." },
+    { n:"03", slug:"03-exposure-first.html", name:"Exposure-First",
+      thesis:"Lead with the money: headline exposures as the biggest figures with one honest stacked exposure-mix micro-viz, and LOB status attached to each figure.",
+      job:"How big is this account and where does the exposure sit?" },
+    { n:"04", slug:"04-underwriter-datasheet.html", name:"Underwriter Datasheet",
+      thesis:"The listed brief made genuinely beautiful: a disciplined definition-grid of facts plus a quiet vehicle-schedule table — elegance from type, spacing and alignment restraint.",
+      job:"Read the file the way I'd brief a colleague — clean, complete, scannable." },
+    { n:"05", slug:"05-priority-signal-cards.html", name:"Priority Signal Cards",
+      thesis:"The underwriter's ranked checklist as a curated set of signal cards in emphasis order (who → LOBs → exposures → loss runs → context), each card one clear signal.",
+      job:"Walk me down the priorities, most important first." },
+    { n:"06", slug:"06-coverage-map.html", name:"Coverage Map",
+      thesis:"A spatial overview: a state × line-of-business coverage matrix showing what's produced where (CA / HI), with exposures and the loss-run flag around it.",
+      job:"What coverage was produced in which state?" },
   ];
 
-  const POLE_LABEL = { panel:"Standalone panel", field:"Field-evidence extension" };
+  const ARCHIVE = [
+    { slug:"01-command-center.html",       name:"Command Center" },
+    { slug:"02-underwriter-brief.html",    name:"Underwriter Brief" },
+    { slug:"03-triage-traffic-light.html", name:"Triage Traffic-Light" },
+    { slug:"04-tabbed-deep-dive.html",     name:"Tabbed Deep-Dive" },
+    { slug:"05-timeline-story.html",       name:"Timeline / Story" },
+    { slug:"06-split-ledger.html",         name:"Split Ledger" },
+  ];
 
-  const grid = document.getElementById("grid");
-  grid.innerHTML = CONCEPTS.map(c => `
+  document.getElementById("grid").innerHTML = CONCEPTS.map(c => `
     <article class="card">
       <div class="card-top">
         <div class="num">${c.n}</div>
         <h3>${c.name}</h3>
       </div>
-      <span class="pole-tag ${c.pole}">${POLE_LABEL[c.pole]}</span>
       <p class="thesis">${c.thesis}</p>
       <p class="job"><b>Who it's for</b>${c.job}</p>
       <div class="card-footer">
         <span class="badge-feas"><span class="dot"></span>LWC-feasible</span>
-        <a class="open-btn" href="concepts/${c.slug}">Open concept →</a>
+        <a class="open-btn" href="concepts/${c.slug}">Open concept &rarr;</a>
       </div>
     </article>
   `).join("");
 
-  // Theme toggle
-  (function(){
-    const root = document.documentElement;
-    const btn = document.getElementById("themeToggle");
-    const label = document.getElementById("themeLabel");
-    const icon = document.getElementById("themeIcon");
-    function systemDark(){ return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches; }
-    function isDark(){ return root.getAttribute("data-theme") === "dark" || (!root.getAttribute("data-theme") && systemDark()); }
-    function sync(){ const d = isDark(); label.textContent = d ? "Light" : "Dark"; icon.textContent = d ? "☀" : "◐"; }
-    btn.addEventListener("click", () => {
-      root.setAttribute("data-theme", isDark() ? "light" : "dark");
-      sync();
-    });
-    sync();
-  })();
+  document.getElementById("archive").innerHTML = ARCHIVE.map(a => `
+    <a href="concepts/v1/${a.slug}">${a.name} <span class="old">· v1</span></a>
+  `).join("");
 </script>
 </body>
 </html>
