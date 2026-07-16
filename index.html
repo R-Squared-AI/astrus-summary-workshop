@@ -149,7 +149,7 @@
   .c2-row-head { display:flex; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom:7px; }
   .c2-row-name { font-size:0.875rem; font-weight:800; letter-spacing:-0.01em; }
   .c2-lines { display:flex; flex-direction:column; gap:6px; }
-  .c2-ln { display:grid; grid-template-columns:18px 62px 1fr; gap:8px; align-items:center; }
+  .c2-ln { display:grid; grid-template-columns:18px 1fr; gap:8px; align-items:center; }
   .c2-ln svg { width:18px; height:18px; flex:none; }
   .c2-word { font-size:0.625rem; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; }
   .c2-field { display:flex; align-items:baseline; gap:7px; min-width:0; }
@@ -158,8 +158,7 @@
   .c2-ln.c2-ok   .c2-word { color:var(--ok); }
   .c2-ln.c2-warn .c2-word { color:var(--warn); } .c2-ln.c2-warn .c2-val { color:var(--warn); font-size:0.75rem; }
   .c2-ln.c2-miss .c2-word { color:var(--miss); } .c2-ln.c2-miss .c2-val { color:var(--miss); font-size:0.75rem; }
-  .c2-row.c2-identity { background:linear-gradient(90deg,#eaf3fc 0%,#fff 60%); border-top:2px solid var(--geo-bd); }
-  .c2-row.c2-identity .c2-row-name { color:var(--brand-dark); }
+  /* Concept 2 Submission row renders like any other row — no blue highlight. */
 
   /* ======================================================================== */
   /* CONCEPT 3 — TRACKED LEDGER  (prefix c3-)                                  */
@@ -175,7 +174,7 @@
   .c3-group.c3-identity .c3-glob { color:var(--brand); }
 
   /* the tracking row: [rail][status word][LABEL][value] — all aligned */
-  .c3-frow { display:grid; grid-template-columns:4px 60px 1fr minmax(90px,1.15fr);
+  .c3-frow { display:grid; grid-template-columns:4px 30px 1fr minmax(90px,1.15fr);
              align-items:center; column-gap:12px; padding:0; min-height:38px;
              border-top:1px solid #edf0f4; position:relative; }
   .c3-rail { align-self:stretch; width:4px; border-radius:0; }
@@ -218,18 +217,10 @@
   <header class="hero">
     <div class="hero-inner">
       <h1>Astrus Submission Summary &mdash; Concept Comparison</h1>
-      <p class="lede">The same submission summary in three layouts, side by side. Identical data
-        drives all three panels &mdash; only the presentation changes. Switch the submission below
-        to re-render every panel at once.</p>
     </div>
   </header>
 
   <div class="controls">
-    <span class="ctl-label">Submission</span>
-    <div class="toggle" role="group" aria-label="Choose submission">
-      <button type="button" id="btn-ab"  aria-pressed="true"  onclick="renderAll('ab')">A &amp; B Painting</button>
-      <button type="button" id="btn-jhl" aria-pressed="false" onclick="renderAll('jhl')">J.H. Lynch</button>
-    </div>
     <div class="legend" role="note" aria-label="Status legend">
       <span class="lg"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M6 10.2l2.6 2.6L14.2 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>OK / Present</span>
       <span class="lg"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8.5 15H1.5z" fill="var(--warn)"/><rect x="9.1" y="7.4" width="1.8" height="5" rx="0.9" fill="#fff"/><circle cx="10" cy="14.4" r="1" fill="#fff"/></svg>Partial</span>
@@ -277,10 +268,6 @@
       </div>
     </section>
   </main>
-
-  <p class="foot">Concept 3 &mdash; <strong>Tracked Ledger</strong> &mdash; is the hybrid: Concept 2&rsquo;s
-    left-leading status, rebuilt as a full-width aligned ledger with a status rail, zebra tint, and a
-    fixed value column so the eye tracks straight across each row from status to value.</p>
 
 <script>
 /* Shared data — copied verbatim from concepts/02-bold-boxes.html & 03-lead-status.html. */
@@ -364,10 +351,17 @@ function renderHead(prefix, d){
   document.getElementById(prefix+'-subline').textContent = h.meta || '';
 }
 
+/* Submission (identity) row leads; LOB lines follow underneath. */
+function ordered(d){
+  const id = d.lines.filter(l => l.kind === 'identity');
+  const rest = d.lines.filter(l => l.kind !== 'identity');
+  return id.concat(rest);
+}
+
 /* ---- Concept 1 · Bold Boxes ------------------------------------------------ */
 function render1(d){
   renderHead('c1', d);
-  document.getElementById('c1-rows').innerHTML = d.lines.map(line => {
+  document.getElementById('c1-rows').innerHTML = ordered(d).map(line => {
     const isId = line.kind === 'identity';
     let tags = '';
     (line.geo||[]).forEach(g => tags += '<span class="geotag">'+esc(g)+'</span>');
@@ -385,7 +379,7 @@ function render1(d){
 /* ---- Concept 2 · Lead Status ---------------------------------------------- */
 function render2(d){
   renderHead('c2', d);
-  document.getElementById('c2-rows').innerHTML = d.lines.map(line => {
+  document.getElementById('c2-rows').innerHTML = ordered(d).map(line => {
     const isId = line.kind === 'identity';
     const tags = [];
     (line.geo||[]).forEach(g => tags.push('<span class="geotag">'+esc(g)+'</span>'));
@@ -394,7 +388,6 @@ function render2(d){
     const lns = line.fields.map(f => {
       const st = f.status || 'ok';
       return '<div class="c2-ln c2-'+st+'">'+ICON[st]+
-        '<span class="c2-word">'+WORD[st]+'</span>'+
         '<span class="c2-field"><span class="c2-lab">'+esc(f.label)+'</span>'+
         '<span class="c2-val">'+esc(f.value)+'</span></span></div>';
     }).join('');
@@ -407,7 +400,7 @@ function render2(d){
 /* ---- Concept 3 · Tracked Ledger ------------------------------------------- */
 function render3(d){
   renderHead('c3', d);
-  document.getElementById('c3-rows').innerHTML = d.lines.map(line => {
+  document.getElementById('c3-rows').innerHTML = ordered(d).map(line => {
     const isId = line.kind === 'identity';
     const tags = [];
     (line.geo||[]).forEach(g => tags.push('<span class="geotag">'+esc(g)+'</span>'));
@@ -417,7 +410,7 @@ function render3(d){
       const st = f.status || 'ok';
       return '<div class="c3-frow c3-'+st+(i%2?' c3-even':'')+'">'+
         '<span class="c3-rail"></span>'+
-        '<span class="c3-word">'+ICON[st]+WORD[st]+'</span>'+
+        '<span class="c3-word">'+ICON[st]+'</span>'+
         '<span class="c3-lab">'+esc(f.label)+'</span>'+
         '<span class="c3-val">'+curHtml(f.value,'c3-cur')+'</span></div>';
     }).join('');
@@ -429,8 +422,6 @@ function render3(d){
 
 function renderAll(key){
   const d = DATA[key];
-  document.getElementById('btn-ab').setAttribute('aria-pressed', key==='ab');
-  document.getElementById('btn-jhl').setAttribute('aria-pressed', key==='jhl');
   render1(d); render2(d); render3(d);
 }
 
