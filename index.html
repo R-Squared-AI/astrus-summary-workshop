@@ -108,7 +108,6 @@
                      padding:2px 9px; font-size:0.625rem; }
   .p-eyebrow .d { width:3px; height:3px; border-radius:50%; background:#b9bdc7; }
   .p-applicant { font-size:1.125rem; line-height:1.15; font-weight:800; letter-spacing:-0.02em; margin:0; }
-  .p-subline { margin-top:5px; font-size:0.75rem; font-weight:600; color:var(--text-2); line-height:1.45; }
 
   /* shared LOB name / geo tag styling (used by all three, prefix-free but only inside .p-head siblings) */
   .geotag { font-size:0.5625rem; font-weight:800; letter-spacing:0.03em; color:var(--geo);
@@ -236,7 +235,6 @@
         <div class="p-head">
           <div class="p-eyebrow" id="c1-eyebrow"></div>
           <h2 class="p-applicant" id="c1-applicant"></h2>
-          <div class="p-subline" id="c1-subline"></div>
         </div>
         <div class="c1-rows" id="c1-rows"></div>
       </div>
@@ -249,7 +247,6 @@
         <div class="p-head">
           <div class="p-eyebrow" id="c2-eyebrow"></div>
           <h2 class="p-applicant" id="c2-applicant"></h2>
-          <div class="p-subline" id="c2-subline"></div>
         </div>
         <div class="c2-rows" id="c2-rows"></div>
       </div>
@@ -262,7 +259,6 @@
         <div class="p-head">
           <div class="p-eyebrow" id="c3-eyebrow"></div>
           <h2 class="p-applicant" id="c3-applicant"></h2>
-          <div class="p-subline" id="c3-subline"></div>
         </div>
         <div class="c3-body" id="c3-rows"></div>
       </div>
@@ -273,8 +269,7 @@
 /* Shared data — copied verbatim from concepts/02-bold-boxes.html & 03-lead-status.html. */
 const DATA = {
   ab: {
-    header:{name:"A & B Painting, Inc.", sub:"SUB 022667", status:"Clearance Requested", tag:"New",
-      meta:"3 named insureds · R2 Solutions · Chubb · Place · ESIS · CA + HI · Eff 07/01/2026"},
+    header:{name:"A & B Painting, Inc.", sub:"SUB 022667", status:"Clearance Requested", tag:"New"},
     lines:[
       {lob:"Workers’ Compensation", geo:["CA"], fields:[
         {label:"Payroll", value:"$4,928,350", status:"ok"},
@@ -296,15 +291,18 @@ const DATA = {
         {label:"Effective date", value:"Missing", status:"warn"},
         {label:"Loss runs", value:"$0 incurred", status:"ok"}]},
       {lob:"Submission", kind:"identity", fields:[
+        {label:"Named insureds", value:"3", status:"ok"},
+        {label:"States", value:"CA · HI", status:"ok"},
+        {label:"Carrier", value:"Chubb · Place", status:"ok"},
+        {label:"TPA", value:"ESIS", status:"ok"},
+        {label:"Effective date", value:"07/01/2026", status:"ok"},
         {label:"Revenue", value:"$8,500,000", status:"ok"},
         {label:"NAICS", value:"238320", status:"ok"},
         {label:"SIC", value:"1721", status:"ok"},
-        {label:"Effective date", value:"07/01/2026", status:"ok"},
         {label:"FEIN", value:"Present", status:"ok"}]}
     ]},
   jhl: {
-    header:{name:"J.H. Lynch & Sons, Inc.", sub:"", status:"", tag:"",
-      meta:"Rhode Island · heavy highway construction & trucking · large fleet · R2 Solutions"},
+    header:{name:"J.H. Lynch & Sons, Inc.", sub:"", status:"", tag:""},
     lines:[
       {lob:"Workers’ Compensation", geo:["RI"], fields:[
         {label:"Payroll", value:"$17,770,000", status:"ok"},
@@ -348,7 +346,6 @@ function renderHead(prefix, d){
   if (h.tag)    eb.push('<span>'+esc(h.tag)+'</span>');
   document.getElementById(prefix+'-eyebrow').innerHTML = eb.join('<span class="d"></span>');
   document.getElementById(prefix+'-applicant').textContent = h.name;
-  document.getElementById(prefix+'-subline').textContent = h.meta || '';
 }
 
 /* Submission (identity) row leads; LOB lines follow underneath. */
@@ -384,7 +381,6 @@ function render2(d){
     const tags = [];
     (line.geo||[]).forEach(g => tags.push('<span class="geotag">'+esc(g)+'</span>'));
     if (line.carve) tags.push('<span class="kindtag">'+esc(line.carve)+'</span>');
-    if (isId)       tags.push('<span class="kindtag">applicant</span>');
     const lns = line.fields.map(f => {
       const st = f.status || 'ok';
       return '<div class="c2-ln c2-'+st+'">'+ICON[st]+
@@ -405,7 +401,6 @@ function render3(d){
     const tags = [];
     (line.geo||[]).forEach(g => tags.push('<span class="geotag">'+esc(g)+'</span>'));
     if (line.carve) tags.push('<span class="kindtag">'+esc(line.carve)+'</span>');
-    if (isId)       tags.push('<span class="kindtag">applicant</span>');
     const frows = line.fields.map((f,i) => {
       const st = f.status || 'ok';
       return '<div class="c3-frow c3-'+st+(i%2?' c3-even':'')+'">'+
